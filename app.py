@@ -141,7 +141,7 @@ kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
-# --- LAVENDER THEME RESULT CARD (INSPIRED BY UI REFERENCE) ---
+# --- RESULT CARD GENERATOR ---
 def create_interactive_result_card(title, value_text, status_label, bar_percent, recommendation, key_biomarkers, risk_level_text, is_risk=False):
     badge_bg = "#FEE2E2" if is_risk else "#DCFCE7"
     badge_color = "#991B1B" if is_risk else "#166534"
@@ -341,26 +341,22 @@ def handle_admin_login(passcode):
 def handle_logout():
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", [], "", ""
 
-# --- SOFT LAVENDER / LIGHT HEALTHCARE CSS THEME ---
+# --- LIGHT LAVENDER CSS THEME ---
 css = """
-/* BASE THEME (MATCHES IMAGE PATTERN) */
 :root {
     --bg-main: #EBE8F9;
     --card-bg: #FFFFFF;
     --accent-purple: #7C3AED;
-    --accent-purple-hover: #6D28D9;
     --text-primary: #18181B;
-    --text-secondary: #71717A;
     --border-color: #E4E4E7;
 }
 
 body, .gradio-container {
     background-color: var(--bg-main) !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     color: var(--text-primary) !important;
 }
 
-/* CARDS & CONTAINERS */
 .lavender-card {
     background: var(--card-bg) !important;
     border-radius: 24px !important;
@@ -369,7 +365,6 @@ body, .gradio-container {
     box-shadow: 0 10px 30px rgba(124, 58, 237, 0.05) !important;
 }
 
-/* SCROLL AREA */
 .scroll-panel {
     max-height: 520px;
     overflow-y: auto !important;
@@ -379,7 +374,6 @@ body, .gradio-container {
 .scroll-panel::-webkit-scrollbar-track { background: #F4F4F5; border-radius: 10px; }
 .scroll-panel::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 10px; }
 
-/* TABS STYLING (PURPLE PILLS LIKE UI IMAGE) */
 button[role="tab"] {
     color: #52525B !important;
     font-weight: 700 !important;
@@ -404,7 +398,6 @@ button[role="tab"][aria-selected="true"] {
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25) !important;
 }
 
-/* INPUT LABELS & TEXT BOXES */
 label span { 
     color: var(--text-primary) !important; 
     font-weight: 700 !important; 
@@ -428,7 +421,6 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15) !important;
 }
 
-/* PRIMARY BUTTONS */
 button.primary-btn {
     background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important;
     color: #FFFFFF !important;
@@ -448,7 +440,6 @@ button.primary-btn:hover {
     box-shadow: 0 8px 22px rgba(124, 58, 237, 0.35) !important;
 }
 
-/* LOGOUT BUTTON */
 button.logout-btn {
     background: #FEE2E2 !important;
     color: #991B1B !important;
@@ -462,7 +453,6 @@ button.logout-btn:hover {
     background: #FCA5A5 !important;
 }
 
-/* DATAFRAME TABLES */
 .dataframe th {
     background-color: #F3E8FF !important;
     color: #6B21A8 !important;
@@ -493,7 +483,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                 gr.HTML("""
                 <div style="background: #F3E8FF; border-left: 4px solid #7C3AED; padding: 12px 16px; border-radius: 12px;">
                     <span style="color: #6B21A8; font-weight: 800; font-size: 0.85rem;">● SYSTEM ONLINE</span><br/>
-                    <span style="color: #4C1D95; font-size: 0.85rem; font-weight: 600;">5 Diagnostic Machine Learning Models Loaded</span>
+                    <span style="color: #4C1D95; font-size: 0.85rem; font-weight: 600;">5 Machine Learning Models Operational</span>
                 </div>
                 """)
 
@@ -544,32 +534,45 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
     # ------------------ MAIN CLINICAL DASHBOARD ------------------
     with gr.Row(visible=False, elem_classes=["lavender-card"]) as user_dashboard_view:
-        # LEFT NAVIGATION SIDEBAR
-        with gr.Column(scale=1, min_width=200):
+        # INFORMATIVE SIDEBAR (REPLACED UNCLICKABLE ITEMS WITH USEFUL INFORMATION)
+        with gr.Column(scale=1, min_width=240):
             gr.HTML("""
-            <div style="text-align: center; padding-bottom: 12px;">
+            <div style="text-align: center; padding-bottom: 10px;">
                 <div style="font-size: 2.2rem;">🧪</div>
-                <div style="font-weight: 900; color: #18181B; font-size: 1.2rem; margin-top: 4px;">Sick Sense</div>
+                <div style="font-weight: 900; color: #18181B; font-size: 1.2rem; margin-top: 2px;">Sick Sense</div>
                 <div style="color: #7C3AED; font-size: 0.75rem; font-weight: 700;">CLINICAL WORKSTATION</div>
             </div>
             """)
             gr.Markdown("---")
+            
+            # INFORMATIVE SYSTEM & CLINICAL CARDS IN SIDEBAR
             gr.HTML("""
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="background: #F3E8FF; color: #6B21A8; padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; border-left: 4px solid #7C3AED;">
-                    🏠 Workstation Dashboard
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- SYSTEM STATUS -->
+                <div style="background: #FAF5FF; border: 1px solid #E9D5FF; padding: 12px; border-radius: 14px;">
+                    <div style="font-size: 0.75rem; color: #6B21A8; font-weight: 800; text-transform: uppercase;">● ENGINE STATUS</div>
+                    <div style="font-size: 0.88rem; font-weight: 700; color: #18181B; margin-top: 4px;">ML Pipeline Ready</div>
+                    <div style="font-size: 0.78rem; color: #71717A; margin-top: 2px;">All 5 diagnostic models loaded and calibrated.</div>
                 </div>
-                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
-                    📅 Patient Appointments
+
+                <!-- CLINICAL GUIDE INFO -->
+                <div style="background: #F4F4F5; border: 1px solid #E4E4E7; padding: 12px; border-radius: 14px;">
+                    <div style="font-size: 0.75rem; color: #52525B; font-weight: 800; text-transform: uppercase;">💡 Quick Reference</div>
+                    <ul style="margin: 6px 0 0 0; padding-left: 16px; font-size: 0.78rem; color: #3F3F46; line-height: 1.5;">
+                        <li><strong>Glucose Target:</strong> &lt; 100 mg/dL</li>
+                        <li><strong>eGFR Normal:</strong> &gt; 60 mL/min</li>
+                        <li><strong>Cholesterol Target:</strong> &lt; 200 mg/dl</li>
+                    </ul>
                 </div>
-                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
-                    📊 Diagnostics & Reports
-                </div>
-                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
-                    ⚙️ Workstation Settings
+
+                <!-- DATA PRIVACY NOTICE -->
+                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 12px; border-radius: 14px;">
+                    <div style="font-size: 0.75rem; color: #065F46; font-weight: 800; text-transform: uppercase;">🔒 HIPAA / Encryption</div>
+                    <div style="font-size: 0.78rem; color: #047857; margin-top: 4px;">All records are logged with hashed signatures in local storage.</div>
                 </div>
             </div>
             """)
+            
             gr.Markdown("---")
             user_logout_btn = gr.Button("🚪 Sign Out", elem_classes=["logout-btn"])
 
