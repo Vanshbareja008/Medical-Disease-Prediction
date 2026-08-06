@@ -374,6 +374,30 @@ body, .gradio-container {
 .scroll-panel::-webkit-scrollbar-track { background: #F4F4F5; border-radius: 10px; }
 .scroll-panel::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 10px; }
 
+/* HORIZONTAL SCROLLABLE TABS CONTAINER */
+.horizontal-tabs-container div.tab-nav {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    padding-bottom: 8px !important;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar {
+    height: 6px;
+}
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-track {
+    background: #F4F4F5;
+    border-radius: 10px;
+}
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-thumb {
+    background: #C4B5FD;
+    border-radius: 10px;
+}
+
 button[role="tab"] {
     color: #52525B !important;
     font-weight: 700 !important;
@@ -382,7 +406,8 @@ button[role="tab"] {
     border: 1px solid #E4E4E7 !important;
     border-radius: 12px !important;
     padding: 10px 18px !important;
-    margin-right: 6px !important;
+    margin-right: 8px !important;
+    flex-shrink: 0 !important;
     transition: all 0.2s ease !important;
 }
 
@@ -534,7 +559,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
     # ------------------ MAIN CLINICAL DASHBOARD ------------------
     with gr.Row(visible=False, elem_classes=["lavender-card"]) as user_dashboard_view:
-        # INFORMATIVE SIDEBAR (REPLACED UNCLICKABLE ITEMS WITH USEFUL INFORMATION)
+        # INFORMATIVE SIDEBAR
         with gr.Column(scale=1, min_width=240):
             gr.HTML("""
             <div style="text-align: center; padding-bottom: 10px;">
@@ -545,7 +570,6 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             """)
             gr.Markdown("---")
             
-            # INFORMATIVE SYSTEM & CLINICAL CARDS IN SIDEBAR
             gr.HTML("""
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <!-- SYSTEM STATUS -->
@@ -583,7 +607,8 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             
             gr.Markdown("---")
 
-            with gr.Tabs():
+            # HORIZONTALLY SCROLLABLE DISEASE TOGGLES CONTAINER
+            with gr.Tabs(elem_classes=["horizontal-tabs-container"]):
                 # Heart Health Tab
                 with gr.Tab("❤️ Heart Diagnostic"):
                     with gr.Column(elem_classes=["scroll-panel"]):
