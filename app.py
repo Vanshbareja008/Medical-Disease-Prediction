@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import hashlib
+from datetime import datetime
 import gradio as gr
 import joblib
 import numpy as np
@@ -13,11 +14,22 @@ ADMIN_SECRET_KEY = "admin@123"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    # User Credentials Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL
+        )
+    """)
+    # User Lab & Diagnostic History Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lab_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            test_type TEXT NOT NULL,
+            result_summary TEXT NOT NULL,
+            timestamp TEXT NOT NULL
         )
     """)
     conn.commit()
@@ -54,6 +66,30 @@ def verify_user(username, password):
     conn.close()
     return True if row and row[0] == hash_password(password) else False
 
+# --- SAVE USER DIAGNOSTIC RECORD ---
+def save_user_record(username, test_type, result_summary):
+    if not username:
+        return
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "INSERT INTO lab_history (username, test_type, result_summary, timestamp) VALUES (?, ?, ?, ?)",
+        (username, test_type, result_summary, time_str)
+    )
+    conn.commit()
+    conn.close()
+
+def get_user_history(username):
+    if not username:
+        return []
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT test_type, result_summary, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", (username,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 # --- ADMIN DATABASE FUNCTIONS ---
 def get_all_users():
     conn = sqlite3.connect(DB_FILE)
@@ -71,6 +107,7 @@ def delete_user_by_username(username_to_delete):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE username = ?", (username_to_delete,))
+    cursor.execute("DELETE FROM lab_history WHERE username = ?", (username_to_delete,))
     deleted_count = cursor.rowcount
     conn.commit()
     conn.close()
@@ -88,7 +125,7 @@ obesity_model = joblib.load("Obesity Diagn.pkl")
 
 # --- UI VISUAL RESULT CARD GENERATOR ---
 def create_result_card(title, value_text, status_label, bar_percent, is_risk=False):
-    bar_color = "#EF4444" if is_risk else "#10B981"  # Red if risk, Green if healthy
+    bar_color = "#EF4444" if is_risk else "#10B981"
     badge_bg = "#FEE2E2" if is_risk else "#E0F2FE"
     badge_color = "#991B1B" if is_risk else "#0369A1"
 
@@ -103,7 +140,6 @@ def create_result_card(title, value_text, status_label, bar_percent, is_risk=Fal
         <div style="font-size: 1.3rem; font-weight: 800; color: #111827; margin-bottom: 12px;">
             {value_text}
         </div>
-        <!-- VISUAL STATUS BAR -->
         <div style="width: 100%; background: #E5E7EB; height: 8px; border-radius: 4px; overflow: hidden;">
             <div style="width: {bar_percent}%; background: {bar_color}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
         </div>
@@ -115,44 +151,56 @@ def create_result_card(title, value_text, status_label, bar_percent, is_risk=Fal
     </div>
     """
 
-# --- PREDICTION FUNCTIONS ---
-def predict_heart(age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
+# --- PREDICTION FUNCTIONS (WITH HISTORY SAVING) ---
+def predict_heart(username, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
     data = np.array([[float(age), float(sex), float(cp), float(trestbps), float(chol),
                       float(fbs), float(restecg), float(thalach), float(exang), 
                       float(oldpeak), float(slope), float(ca), float(thal)]])
     res = heart_model.predict(data)[0]
+    result_text = "Heart Disease Risk Detected" if res == 1 else "Normal Cardiac Profile"
+    save_user_record(username, "Heart Disease", result_text)
+    
     if res == 1:
-        return create_result_card("Heart Assessment", "Heart Disease Risk Detected", "High Risk", 85, is_risk=True)
-    return create_result_card("Heart Assessment", "Normal Cardiac Profile", "Optimal Range", 15, is_risk=False)
+        return create_result_card("Heart Assessment", result_text, "High Risk", 85, is_risk=True)
+    return create_result_card("Heart Assessment", result_text, "Optimal Range", 15, is_risk=False)
 
-def predict_diabetes(gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
+def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
     gender_map = {"Female": 0, "Male": 1, "Other": 2}
     smoke_map = {"Never": 0, "No Info": 1, "Current": 2, "Former": 3, "Ever": 4, "Not Current": 5}
     data = np.array([[gender_map[gender], float(age), float(hypertension), float(heart_disease),
                       smoke_map[smoking], float(bmi), float(hba1c), float(glucose)]])
     res = diabetes_model.predict(data)[0]
+    result_text = "Elevated Glucose Indicators" if res == 1 else "Normal Glycemic Profile"
+    save_user_record(username, "Diabetes Analysis", result_text)
+    
     if res == 1:
-        return create_result_card("Diabetes Assessment", "Elevated Glucose Indicators", "High Risk", 90, is_risk=True)
-    return create_result_card("Diabetes Assessment", "Normal Glycemic Profile", "In-Range", 20, is_risk=False)
+        return create_result_card("Diabetes Assessment", result_text, "High Risk", 90, is_risk=True)
+    return create_result_card("Diabetes Assessment", result_text, "In-Range", 20, is_risk=False)
 
-def predict_kidney(age, gender, bp, creatinine, urea, hb, rbc, hypertension, egfr, albumin):
+def predict_kidney(username, age, gender, bp, creatinine, urea, hb, rbc, hypertension, egfr, albumin):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(bp), float(creatinine),
                       float(urea), float(hb), float(rbc), 1 if hypertension == "Yes" else 0,
                       float(egfr), 1 if albumin == "Yes" else 0]])
     res = kidney_model.predict(data)[0]
+    result_text = "Kidney Disease Marker" if res == 1 else "Healthy Renal Indicators"
+    save_user_record(username, "Kidney Function", result_text)
+    
     if res == 1:
-        return create_result_card("Kidney Panel", "Kidney Function Disease Marker", "Low Range Alert", 80, is_risk=True)
-    return create_result_card("Kidney Panel", "Healthy Renal Indicators", "Optimal", 10, is_risk=False)
+        return create_result_card("Kidney Panel", result_text, "Low Range Alert", 80, is_risk=True)
+    return create_result_card("Kidney Panel", result_text, "Optimal", 10, is_risk=False)
 
-def predict_liver(age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
+def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(tb), float(db),
                       float(alk), float(sgpt), float(sgot), float(proteins), float(albumin), float(ratio)]])
     res = liver_model.predict(data)[0]
+    result_text = "Hepatic Risk Indicator" if res == 1 else "Healthy Liver Function"
+    save_user_record(username, "Liver Function", result_text)
+    
     if res == 1:
-        return create_result_card("Liver Function", "Hepatic Risk Indicator", "Elevated", 75, is_risk=True)
-    return create_result_card("Liver Function", "Healthy Liver Function", "In-Range", 15, is_risk=False)
+        return create_result_card("Liver Function", result_text, "Elevated", 75, is_risk=True)
+    return create_result_card("Liver Function", result_text, "In-Range", 15, is_risk=False)
 
-def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, smoke, ch2o, scc, faf, tue, calc, mtrans):
+def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, ncp, caec, smoke, ch2o, scc, faf, tue, calc, mtrans):
     gender_map, yesno = {"Female": 0, "Male": 1}, {"No": 0, "Yes": 1}
     caec_map = calc_map = {"No": 0, "Sometimes": 1, "Frequently": 2, "Always": 3}
     mtrans_map = {"Public Transportation": 0, "Walking": 1, "Automobile": 2, "Motorbike": 3, "Bike": 4}
@@ -163,6 +211,8 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     val = int(obesity_model.predict(data)[0])
     lbl = label_map[val]
+    save_user_record(username, "Body Mass", lbl)
+    
     is_risk = val > 1
     pct = min(100, max(15, val * 16))
     return create_result_card("Body Mass Index", f"Category: {lbl}", "Analysis Complete", pct, is_risk=is_risk)
@@ -170,16 +220,17 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
     if verify_user(username, password):
-        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), ""
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Invalid username or password."
+        user_hist = get_user_history(username)
+        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "", username, user_hist
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Invalid username or password.", "", []
 
 def handle_admin_login(passcode):
     if passcode == ADMIN_SECRET_KEY:
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", get_all_users()
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Incorrect Admin Secret Key.", []
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", "", [], get_all_users()
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Incorrect Admin Secret Key.", "", [], []
 
 def handle_logout():
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", ""
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", [], ""
 
 # --- STYLING ---
 css = """
@@ -279,6 +330,9 @@ header_html = """
 
 with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
     gr.HTML(header_html)
+    
+    # State variable to track logged in user
+    current_user_state = gr.State(value="")
 
     # ------------------ AUTHENTICATION PORTAL ------------------
     with gr.Column(visible=True, elem_classes=["auth-card"]) as auth_view:
@@ -331,7 +385,6 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
                     heart_btn = gr.Button("Run Heart Analysis", elem_classes=["primary-btn"])
                     heart_output = gr.HTML()
-                    heart_btn.click(predict_heart, inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output)
 
             # Diabetes Tab
             with gr.Tab("🩸 Diabetes"):
@@ -350,7 +403,6 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
                     diabetes_btn = gr.Button("Analyze Diabetes Metrics", elem_classes=["primary-btn"])
                     diabetes_output = gr.HTML()
-                    diabetes_btn.click(predict_diabetes, inputs=[gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output)
 
             # Kidney Tab
             with gr.Tab("🫘 Kidney"):
@@ -371,7 +423,6 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
                     kidney_btn = gr.Button("Analyze Kidney Function", elem_classes=["primary-btn"])
                     kidney_output = gr.HTML()
-                    kidney_btn.click(predict_kidney, inputs=[k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output)
 
             # Liver Tab
             with gr.Tab("🫀 Liver"):
@@ -392,9 +443,8 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
                     liver_btn = gr.Button("Analyze Liver Biomarkers", elem_classes=["primary-btn"])
                     liver_output = gr.HTML()
-                    liver_btn.click(predict_liver, inputs=[l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output)
 
-            # Obesity Tab
+            # Body Mass Tab
             with gr.Tab("⚖️ Body Mass"):
                 with gr.Column(elem_classes=["scroll-panel"]):
                     with gr.Row():
@@ -420,7 +470,13 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
                     obesity_btn = gr.Button("Analyze Mass Category", elem_classes=["primary-btn"])
                     obesity_output = gr.HTML()
-                    obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
+
+            # Saved Medical History Tab
+            with gr.Tab("📜 Diagnostic History"):
+                with gr.Column(elem_classes=["scroll-panel"]):
+                    gr.Markdown("#### Saved Lab & Diagnostic Logs")
+                    history_table = gr.Dataframe(headers=["Test Module", "Diagnostic Outcome", "Date & Time"], value=[], interactive=False)
+                    refresh_history_btn = gr.Button("🔄 Refresh Medical History")
 
     # ------------------ ADMIN PANEL PAGE ------------------
     with gr.Column(visible=False, elem_classes=["scrollable-card-container"]) as admin_dashboard_view:
@@ -441,12 +497,22 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
 
     # ------------------ EVENT LISTENERS ------------------
     signup_btn.click(register_user, inputs=[new_username, new_password, confirm_password], outputs=[signup_msg])
-    login_btn.click(handle_user_login, inputs=[username_input, password_input], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, login_msg])
-    admin_login_btn.click(handle_admin_login, inputs=[admin_key_input], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_msg, user_table])
-    user_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, username_input, password_input])
-    admin_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_key_input, admin_msg])
+    login_btn.click(handle_user_login, inputs=[username_input, password_input], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, login_msg, current_user_state, history_table])
+    admin_login_btn.click(handle_admin_login, inputs=[admin_key_input], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_msg, current_user_state, history_table, user_table])
+    
+    user_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, username_input, password_input, history_table, current_user_state])
+    admin_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_key_input, admin_msg, history_table, current_user_state])
+    
+    refresh_history_btn.click(get_user_history, inputs=[current_user_state], outputs=[history_table])
     refresh_btn.click(get_all_users, inputs=[], outputs=[user_table])
     delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users, inputs=[], outputs=[user_table])
+
+    # Model Execution + Auto Save to DB Event Handlers
+    heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output).then(get_user_history, inputs=[current_user_state], outputs=[history_table])
+    diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output).then(get_user_history, inputs=[current_user_state], outputs=[history_table])
+    kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output).then(get_user_history, inputs=[current_user_state], outputs=[history_table])
+    liver_btn.click(predict_liver, inputs=[current_user_state, l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output).then(get_user_history, inputs=[current_user_state], outputs=[history_table])
+    obesity_btn.click(predict_obesity, inputs=[current_user_state, o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output).then(get_user_history, inputs=[current_user_state], outputs=[history_table])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
