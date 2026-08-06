@@ -46,79 +46,117 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     return label_map[int(obesity_model.predict(data)[0])]
 
-# Sick Sense Dark-Green / Mint Theme Custom CSS
+# High-Contrast "Sick Sense" Custom CSS
 css = """
 :root {
     --bg-dark: #0A3925;
+    --accent-mint: #A3E6CD;
     --card-bg: #FFFFFF;
-    --accent-mint: #C5EAD9;
+    --input-bg: #F0FDF4;
+    --text-main: #0F172A;
+    --text-muted: #334155;
     --btn-dark: #052316;
-    --text-dark: #0A3925;
 }
 
+/* Base Body */
 body, .gradio-container {
     background-color: var(--bg-dark) !important;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, sans-serif !important;
 }
 
+/* Header */
 .main-title {
     text-align: center;
     color: #FFFFFF;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
-
 .main-title h1 {
-    font-size: 2.2rem;
+    font-size: 2.5rem;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    margin: 0;
+    line-height: 1.1;
 }
-
 .main-title p {
     color: var(--accent-mint);
-    font-size: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 8px;
 }
 
-/* Tabs & Containers */
+/* Tabs Navigation */
 .tabs {
     background: transparent !important;
     border: none !important;
 }
-
+.tab-nav {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+}
 .tab-nav button {
     color: var(--accent-mint) !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
     border: none !important;
     background: transparent !important;
 }
-
 .tab-nav button.selected {
     color: #FFFFFF !important;
-    border-bottom: 3px solid var(--accent-mint) !important;
+    border-bottom: 4px solid var(--accent-mint) !important;
 }
 
-/* Input Card Styling */
+/* Cards & Inputs - High Contrast Fixes */
 .block, .form {
     background: var(--card-bg) !important;
-    border-radius: 20px !important;
-    padding: 16px !important;
+    border-radius: 16px !important;
     border: none !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Custom Buttons */
+/* Force dark readable text on all labels */
+label span, .block label span, span.text-gray-500 {
+    color: var(--text-muted) !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+}
+
+/* Inputs, Select Boxes, and Numbers */
+input, select, textarea, .wrapper {
+    background-color: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    font-weight: 600 !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 8px !important;
+}
+
+input:focus, select:focus {
+    border-color: #10B981 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+}
+
+/* Primary Action Buttons */
 button.primary-btn {
     background-color: var(--btn-dark) !important;
     color: #FFFFFF !important;
     border-radius: 12px !important;
-    font-weight: 700 !important;
-    padding: 12px !important;
-    border: none !important;
-    transition: all 0.2s ease;
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
+    padding: 14px !important;
+    border: 2px solid var(--accent-mint) !important;
+    cursor: pointer;
+    margin-top: 10px;
 }
 
 button.primary-btn:hover {
     background-color: #0d4a31 !important;
-    transform: translateY(-1px);
+    color: var(--accent-mint) !important;
+}
+
+/* Result Text Box */
+.output-box textarea {
+    background-color: #DCFCE7 !important;
+    color: #065F46 !important;
+    font-weight: 800 !important;
+    font-size: 1.2rem !important;
+    text-align: center;
 }
 
 footer { visibility: hidden !important; }
@@ -143,8 +181,8 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     sex = gr.Dropdown(["0", "1"], value="1", label="Sex (1=Male, 0=Female)")
                     cp = gr.Dropdown(["0", "1", "2", "3"], value="0", label="Chest Pain Type")
                 with gr.Row():
-                    trestbps = gr.Number(label="Resting BP", value=130)
-                    chol = gr.Number(label="Cholesterol", value=250)
+                    trestbps = gr.Number(label="Resting BP (mm Hg)", value=130)
+                    chol = gr.Number(label="Cholesterol (mg/dl)", value=250)
                     fbs = gr.Dropdown(["0", "1"], value="0", label="Fasting Sugar (>120 mg/dl)")
                 with gr.Row():
                     restecg = gr.Dropdown(["0", "1", "2"], value="1", label="Rest ECG")
@@ -157,7 +195,7 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     thal = gr.Dropdown(["0", "1", "2", "3"], value="2", label="Thal")
 
                 heart_btn = gr.Button("Analyze Heart Health", elem_classes=["primary-btn"])
-                heart_output = gr.Textbox(label="Result", interactive=False)
+                heart_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                 heart_btn.click(predict_heart, inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output)
 
         # Diabetes Tab
@@ -167,8 +205,8 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     gender = gr.Dropdown(["Female", "Male", "Other"], value="Male", label="Gender")
                     d_age = gr.Number(label="Age", value=40)
                 with gr.Row():
-                    hypertension = gr.Dropdown([0, 1], value=0, label="Hypertension")
-                    heart_disease = gr.Dropdown([0, 1], value=0, label="Heart Disease")
+                    hypertension = gr.Dropdown([0, 1], value=0, label="Hypertension (0=No, 1=Yes)")
+                    heart_disease = gr.Dropdown([0, 1], value=0, label="Heart Disease (0=No, 1=Yes)")
                 smoking = gr.Dropdown(["Never", "No Info", "Current", "Former", "Ever", "Not Current"], value="Never", label="Smoking History")
                 with gr.Row():
                     bmi = gr.Number(label="BMI", value=24)
@@ -176,7 +214,7 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     glucose = gr.Number(label="Blood Glucose", value=110)
 
                 diabetes_btn = gr.Button("Analyze Diabetes Risk", elem_classes=["primary-btn"])
-                diabetes_output = gr.Textbox(label="Result", interactive=False)
+                diabetes_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                 diabetes_btn.click(predict_diabetes, inputs=[gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output)
 
         # Kidney Tab
@@ -197,7 +235,7 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     k_albumin = gr.Dropdown(["No", "Yes"], value="No", label="Albumin")
 
                 kidney_btn = gr.Button("Analyze Kidney Health", elem_classes=["primary-btn"])
-                kidney_output = gr.Textbox(label="Result", interactive=False)
+                kidney_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                 kidney_btn.click(predict_kidney, inputs=[k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output)
 
         # Liver Tab
@@ -218,7 +256,7 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     l_ratio = gr.Number(label="A/G Ratio", value=0.9)
 
                 liver_btn = gr.Button("Analyze Liver Health", elem_classes=["primary-btn"])
-                liver_output = gr.Textbox(label="Result", interactive=False)
+                liver_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                 liver_btn.click(predict_liver, inputs=[l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output)
 
         # Obesity Tab
@@ -246,7 +284,7 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     o_mtrans = gr.Dropdown(["Public Transportation", "Walking", "Automobile", "Motorbike", "Bike"], value="Public Transportation", label="Transport")
 
                 obesity_btn = gr.Button("Analyze Obesity Category", elem_classes=["primary-btn"])
-                obesity_output = gr.Textbox(label="Result", interactive=False)
+                obesity_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                 obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
 
 if __name__ == "__main__":
