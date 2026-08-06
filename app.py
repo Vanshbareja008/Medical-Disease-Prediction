@@ -1,23 +1,69 @@
 import os
+import sqlite3
+import hashlib
 import gradio as gr
 import joblib
 import numpy as np
 
-# Load Models
+# --- DATABASE SETUP ---
+DB_FILE = "users.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+# Initialize DB on app startup
+init_db()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def register_user(username, password, confirm_password):
+    username = username.strip()
+    if not username or not password:
+        return "❌ Username and password cannot be empty."
+    if password != confirm_password:
+        return "❌ Passwords do not match."
+    
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", 
+                       (username, hash_password(password)))
+        conn.commit()
+        conn.close()
+        return "✅ Account created successfully! Please Sign In."
+    except sqlite3.IntegrityError:
+        return "❌ Username already exists. Please choose another."
+
+def verify_user(username, password):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username.strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row and row[0] == hash_password(password):
+        return True
+    return False
+
+# --- LOAD MODELS ---
 heart_model = joblib.load("heart diagn.pkl")
 diabetes_model = joblib.load("diabetes diagn.pkl")
 kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
-# User Credentials Database (Username: Password)
-USERS = {
-    "admin": "admin123",
-    "doctor": "health2026",
-    "user": "password"
-}
-
-# Prediction Functions
+# --- PREDICTION FUNCTIONS ---
 def predict_heart(age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
     data = np.array([[float(age), float(sex), float(cp), float(trestbps), float(chol),
                       float(fbs), float(restecg), float(thalach), float(exang), 
@@ -53,16 +99,16 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     return label_map[int(obesity_model.predict(data)[0])]
 
-# Auth Handlers
+# --- AUTH HANDLERS ---
 def handle_login(username, password):
-    if username in USERS and USERS[username] == password:
+    if verify_user(username, password):
         return gr.update(visible=False), gr.update(visible=True), ""
     return gr.update(visible=True), gr.update(visible=False), "❌ Invalid username or password."
 
 def handle_logout():
     return gr.update(visible=True), gr.update(visible=False), "", ""
 
-# High-Contrast Custom CSS
+# --- STYLING ---
 css = """
 :root {
     --bg-dark: #0A3925;
@@ -98,10 +144,10 @@ body, .gradio-container {
     margin-top: 8px;
 }
 
-/* Auth Section */
+/* Auth Card Layout */
 .login-card {
-    max-width: 420px;
-    margin: 40px auto !important;
+    max-width: 440px;
+    margin: 30px auto !important;
     padding: 24px;
 }
 
@@ -211,13 +257,23 @@ header = """
 with gr.Blocks(css=css, title="Sick Sense") as demo:
     gr.HTML(header)
 
-    # ------------------ LOGIN SCREEN (STARTUP) ------------------
+    # ------------------ LOGIN / REGISTER SCREEN ------------------
     with gr.Column(visible=True, elem_classes=["login-card"]) as login_view:
-        gr.Markdown("### 🔒 Sign In to Access Diagnostics")
-        username_input = gr.Textbox(label="Username", placeholder="Enter username")
-        password_input = gr.Textbox(label="Password", type="password", placeholder="Enter password")
-        login_btn = gr.Button("Sign In", elem_classes=["primary-btn"])
-        login_msg = gr.Markdown("", elem_id="login-msg")
+        with gr.Tabs():
+            # Sign In Tab
+            with gr.Tab("Sign In"):
+                username_input = gr.Textbox(label="Username", placeholder="Enter username")
+                password_input = gr.Textbox(label="Password", type="password", placeholder="Enter password")
+                login_btn = gr.Button("Sign In", elem_classes=["primary-btn"])
+                login_msg = gr.Markdown("")
+
+            # Sign Up Tab
+            with gr.Tab("Create Account"):
+                new_username = gr.Textbox(label="New Username", placeholder="Choose username")
+                new_password = gr.Textbox(label="New Password", type="password", placeholder="Choose password")
+                confirm_password = gr.Textbox(label="Confirm Password", type="password", placeholder="Re-enter password")
+                signup_btn = gr.Button("Register", elem_classes=["primary-btn"])
+                signup_msg = gr.Markdown("")
 
     # ------------------ PREDICTION DASHBOARD ------------------
     with gr.Column(visible=False) as main_view:
@@ -341,6 +397,12 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
 
     # ------------------ EVENT LISTENERS ------------------
+    signup_btn.click(
+        register_user,
+        inputs=[new_username, new_password, confirm_password],
+        outputs=[signup_msg]
+    )
+
     login_btn.click(
         handle_login,
         inputs=[username_input, password_input],
