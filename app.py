@@ -41,9 +41,11 @@ def hash_password(password):
 def register_user(username, password, confirm_password):
     username = username.strip()
     if not username or not password:
-        return "❌ <span style='color: #FF5A5A; font-weight: bold;'>Username and password cannot be empty.</span>"
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>Username and password cannot be empty.</span>"
+    if len(password) < 8:
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>Password must be at least 8 characters long.</span>"
     if password != confirm_password:
-        return "❌ <span style='color: #FF5A5A; font-weight: bold;'>Passwords do not match.</span>"
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>Passwords do not match.</span>"
     
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -52,9 +54,9 @@ def register_user(username, password, confirm_password):
                        (username, hash_password(password)))
         conn.commit()
         conn.close()
-        return "✅ <span style='color: #22C55E; font-weight: bold;'>Account created successfully! Please Sign In.</span>"
+        return "✅ <span style='color: #059669; font-weight: 700;'>Account created successfully! Please Sign In.</span>"
     except sqlite3.IntegrityError:
-        return "❌ <span style='color: #FF5A5A; font-weight: bold;'>Username already exists.</span>"
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>Username already exists.</span>"
 
 def verify_user(username, password):
     conn = sqlite3.connect(DB_FILE)
@@ -118,7 +120,7 @@ def get_all_users():
 def delete_user_by_username(username_to_delete):
     username_to_delete = username_to_delete.strip()
     if not username_to_delete:
-        return "❌ <span style='color: #FF5A5A; font-weight: bold;'>Please enter a valid username.</span>"
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>Please enter a valid username.</span>"
         
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -129,8 +131,8 @@ def delete_user_by_username(username_to_delete):
     conn.close()
     
     if deleted_count > 0:
-        return f"✅ <span style='color: #22C55E; font-weight: bold;'>User '{username_to_delete}' deleted successfully.</span>"
-    return "❌ <span style='color: #FF5A5A; font-weight: bold;'>User not found.</span>"
+        return f"✅ <span style='color: #059669; font-weight: 700;'>User '{username_to_delete}' deleted successfully.</span>"
+    return "❌ <span style='color: #DC2626; font-weight: 700;'>User not found.</span>"
 
 # --- LOAD MODELS ---
 heart_model = joblib.load("heart diagn.pkl")
@@ -139,63 +141,63 @@ kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
-# --- HIGH-CONTRAST INTERACTIVE RESULT CARD ---
+# --- LAVENDER THEME RESULT CARD (INSPIRED BY UI REFERENCE) ---
 def create_interactive_result_card(title, value_text, status_label, bar_percent, recommendation, key_biomarkers, risk_level_text, is_risk=False):
-    bar_color = "#FF4C6A" if is_risk else "#22C55E"
-    badge_bg = "rgba(255, 76, 106, 0.25)" if is_risk else "rgba(34, 197, 94, 0.25)"
-    badge_color = "#FF7A93" if is_risk else "#4ADE80"
+    badge_bg = "#FEE2E2" if is_risk else "#DCFCE7"
+    badge_color = "#991B1B" if is_risk else "#166534"
+    bar_color = "#EF4444" if is_risk else "#7C3AED"
 
     return f"""
-    <div style="background: #1B1E32; border: 1px solid #3B426B; border-radius: 18px; padding: 22px; margin-top: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
+    <div style="background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 20px; padding: 22px; margin-top: 18px; box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);">
         <!-- TOP ROW -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.3rem;">🧪</span>
-                <span style="font-weight: 800; color: #FFFFFF; font-size: 1.2rem; letter-spacing: 0.3px;">{title}</span>
+                <span style="font-weight: 800; color: #18181B; font-size: 1.15rem; letter-spacing: -0.2px;">{title}</span>
             </div>
-            <span style="background: {badge_bg}; color: {badge_color}; border: 1px solid {badge_color}; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">
+            <span style="background: {badge_bg}; color: {badge_color}; padding: 5px 14px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase;">
                 {status_label}
             </span>
         </div>
 
         <!-- DIAGNOSIS HIGHLIGHT -->
-        <div style="font-size: 1.45rem; font-weight: 800; color: #FFFFFF; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-            <span style="color: #9CA3AF; font-size: 1rem; font-weight: 600;">Status:</span> {value_text}
+        <div style="font-size: 1.5rem; font-weight: 900; color: #18181B; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <span style="color: #71717A; font-size: 0.95rem; font-weight: 600;">Outcome:</span> {value_text}
         </div>
 
-        <!-- PROGRESS/RISK BAR -->
-        <div style="margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #E5E7EB; font-weight: 700; margin-bottom: 6px;">
-                <span>Risk Indicator Score</span>
-                <span style="color: {badge_color};">{bar_percent}% Calculated Index</span>
+        <!-- PROGRESS / RANGE INDICATOR BAR -->
+        <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: #52525B; font-weight: 700; margin-bottom: 6px;">
+                <span>Calculated Risk Range</span>
+                <span style="color: {bar_color};">{bar_percent}% Index</span>
             </div>
-            <div style="width: 100%; background: #0F111E; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #2A2E4B;">
-                <div style="width: {bar_percent}%; background: {bar_color}; height: 100%; border-radius: 6px; transition: width 0.8s ease-in-out;"></div>
+            <div style="width: 100%; background: #F4F4F5; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #E4E4E7;">
+                <div style="width: {bar_percent}%; background: {bar_color}; height: 100%; border-radius: 6px; transition: width 0.6s ease-in-out;"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #9CA3AF; margin-top: 6px; font-weight: 600;">
-                <span>0% (Optimal Target)</span>
-                <span>50% (Moderate Warning)</span>
-                <span>100% (High Clinical Risk)</span>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #A1A1AA; margin-top: 6px; font-weight: 600;">
+                <span>Low Risk Target</span>
+                <span>Moderate Range</span>
+                <span>High Threshold</span>
             </div>
         </div>
         
         <!-- EXPANDABLE CLINICAL ANALYSIS PANEL -->
-        <details open style="margin-top: 18px; background: #121422; border-radius: 12px; padding: 14px 18px; border: 1px solid #2D3256;">
-            <summary style="cursor: pointer; font-weight: 800; color: #7C82FF; font-size: 0.95rem; user-select: none;">
-                🔍 Detailed Biomarker Breakdown & Clinical Guidance
+        <details open style="margin-top: 16px; background: #FAF5FF; border-radius: 14px; padding: 14px 18px; border: 1px solid #E9D5FF;">
+            <summary style="cursor: pointer; font-weight: 800; color: #6B21A8; font-size: 0.92rem; user-select: none;">
+                📊 Biomarker Analysis & Guidance Highlights
             </summary>
-            <div style="margin-top: 12px; font-size: 0.9rem; color: #F3F4F6; line-height: 1.6;">
-                <div style="margin-bottom: 8px; background: #1A1D2E; padding: 10px; border-radius: 8px; border-left: 4px solid #5B61F6;">
-                    <strong style="color: #A5B4FC;">Key Biomarkers Evaluated:</strong><br/>
-                    <span style="color: #FFFFFF; font-weight: 600;">{key_biomarkers}</span>
+            <div style="margin-top: 12px; font-size: 0.88rem; color: #27272A; line-height: 1.6;">
+                <div style="margin-bottom: 8px; background: #FFFFFF; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #7C3AED; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <strong style="color: #6B21A8;">Key Biomarkers:</strong><br/>
+                    <span style="color: #18181B; font-weight: 600;">{key_biomarkers}</span>
                 </div>
-                <div style="margin-bottom: 8px; background: #1A1D2E; padding: 10px; border-radius: 8px; border-left: 4px solid {bar_color};">
-                    <strong style="color: #A5B4FC;">Risk Stratification:</strong><br/>
-                    <span style="color: #FFFFFF; font-weight: 600;">{risk_level_text}</span>
+                <div style="margin-bottom: 8px; background: #FFFFFF; padding: 10px 12px; border-radius: 8px; border-left: 4px solid {bar_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <strong style="color: #6B21A8;">Risk Stratification:</strong><br/>
+                    <span style="color: #18181B; font-weight: 600;">{risk_level_text}</span>
                 </div>
-                <div style="background: #1A1D2E; padding: 10px; border-radius: 8px; border-left: 4px solid #22C55E;">
-                    <strong style="color: #A5B4FC;">Actionable Recommendation:</strong><br/>
-                    <span style="color: #FFFFFF; font-weight: 600;">{recommendation}</span>
+                <div style="background: #FFFFFF; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #10B981; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <strong style="color: #6B21A8;">Actionable Recommendation:</strong><br/>
+                    <span style="color: #18181B; font-weight: 600;">{recommendation}</span>
                 </div>
             </div>
         </details>
@@ -212,10 +214,10 @@ def predict_heart(username, age, sex, cp, trestbps, chol, fbs, restecg, thalach,
     save_user_record(username, "Heart Disease", result_text)
     
     biomarkers = f"Age: {age} | Resting BP: {trestbps} mm Hg | Cholesterol: {chol} mg/dl | Max Heart Rate: {thalach} bpm | ST Depression: {oldpeak}"
-    risk_level = "High Probability of Cardiovascular Anomaly" if res == 1 else "Low Probability / Standard Baseline Parameters"
-    rec = "Immediate cardiologist referral advised. Schedule ECG, echocardiogram, and lipid fraction panel." if res == 1 else "Maintain regular aerobic exercises, balanced sodium intake, and perform routine annual cardiac checkups."
+    risk_level = "High Probability of Cardiovascular Anomaly" if res == 1 else "Low Risk / Standard Baseline"
+    rec = "Cardiologist consultation advised. Schedule ECG, echocardiogram, and lipid panel." if res == 1 else "Maintain regular aerobic exercises, balanced diet, and perform annual cardiac checks."
     
-    return create_interactive_result_card("Heart Assessment", result_text, "High Risk" if res == 1 else "Optimal", 88 if res == 1 else 12, rec, biomarkers, risk_level, is_risk=(res == 1))
+    return create_interactive_result_card("Heart Assessment", result_text, "High Risk" if res == 1 else "In-Range", 88 if res == 1 else 12, rec, biomarkers, risk_level, is_risk=(res == 1))
 
 def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
     gender_map = {"Female": 0, "Male": 1, "Other": 2}
@@ -226,9 +228,9 @@ def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking
     result_text = "Elevated Diabetes Risk" if res == 1 else "Normal Glycemic Baseline"
     save_user_record(username, "Diabetes Analysis", result_text)
     
-    biomarkers = f"HbA1c: {hba1c}% | Fasting Glucose: {glucose} mg/dL | BMI: {bmi} kg/m² | Hypertension Status: {hypertension}"
-    risk_level = "Hyperglycemia / Diabetes Type II Biomarkers Present" if res == 1 else "Normoglycemic Baseline"
-    rec = "Consult an endocrinologist for an Oral Glucose Tolerance Test (OGTT) and personalized dietary intervention." if res == 1 else "Maintain a low-glycemic-index diet, active daily routine, and annual glucose monitoring."
+    biomarkers = f"HbA1c: {hba1c}% | Fasting Glucose: {glucose} mg/dL | BMI: {bmi} kg/m² | Hypertension: {hypertension}"
+    risk_level = "Hyperglycemia / Diabetes Type II Risk" if res == 1 else "Normoglycemic Baseline"
+    rec = "Consult an endocrinologist for an Oral Glucose Tolerance Test (OGTT) and nutritional planning." if res == 1 else "Maintain low-glycemic diet, active daily routine, and annual glucose monitoring."
     
     return create_interactive_result_card("Diabetes Assessment", result_text, "Action Required" if res == 1 else "In-Range", 92 if res == 1 else 15, rec, biomarkers, risk_level, is_risk=(res == 1))
 
@@ -240,11 +242,11 @@ def predict_kidney(username, age, gender, bp, creatinine, urea, hb, rbc, hyperte
     result_text = "Renal Dysfunction Indicator" if res == 1 else "Healthy Kidney Parameters"
     save_user_record(username, "Kidney Function", result_text)
     
-    biomarkers = f"eGFR: {egfr} mL/min | Serum Creatinine: {creatinine} mg/dL | Blood Urea: {urea} mg/dL | Albuminuria: {albumin}"
+    biomarkers = f"eGFR: {egfr} mL/min | Creatinine: {creatinine} mg/dL | Urea: {urea} mg/dL | Albuminuria: {albumin}"
     risk_level = "Elevated Risk of Chronic Kidney Impairment" if res == 1 else "Optimal Glomerular Filtration Rate"
-    rec = "Nephrology evaluation recommended. Order urinalysis, microalbumin test, and monitor fluid balance." if res == 1 else "Ensure adequate daily hydration (2-3L water) and limit unnecessary NSAID medication usage."
+    rec = "Nephrology evaluation recommended. Schedule urinalysis and monitor blood pressure." if res == 1 else "Ensure adequate daily hydration (2-3L water) and avoid unprescribed NSAIDs."
     
-    return create_interactive_result_card("Kidney Panel", result_text, "High Risk" if res == 1 else "Optimal", 84 if res == 1 else 10, rec, biomarkers, risk_level, is_risk=(res == 1))
+    return create_interactive_result_card("Kidney Panel", result_text, "High Risk" if res == 1 else "In-Range", 84 if res == 1 else 10, rec, biomarkers, risk_level, is_risk=(res == 1))
 
 def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(tb), float(db),
@@ -253,9 +255,9 @@ def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albu
     result_text = "Hepatic Enzyme Anomaly" if res == 1 else "Normal Liver Panel"
     save_user_record(username, "Liver Function", result_text)
     
-    biomarkers = f"Total Bilirubin: {tb} | Direct Bilirubin: {db} | SGPT/ALT: {sgpt} U/L | SGOT/AST: {sgot} U/L | A/G Ratio: {ratio}"
+    biomarkers = f"Total Bilirubin: {tb} | Direct Bilirubin: {db} | ALT/SGPT: {sgpt} U/L | AST/SGOT: {sgot} U/L | A/G Ratio: {ratio}"
     risk_level = "Elevated Transaminases / Hepatic Stress" if res == 1 else "Balanced Hepatic Biomarkers"
-    rec = "Schedule an abdominal ultrasound and evaluate liver enzyme trends with a gastroenterologist." if res == 1 else "Limit alcohol consumption, maintain a clean diet, and recheck liver panel annually."
+    rec = "Schedule an abdominal ultrasound and review hepatic enzyme trends with a doctor." if res == 1 else "Maintain healthy lifestyle habits and recheck liver panel annually."
     
     return create_interactive_result_card("Liver Function", result_text, "Elevated Risk" if res == 1 else "In-Range", 78 if res == 1 else 14, rec, biomarkers, risk_level, is_risk=(res == 1))
 
@@ -275,11 +277,11 @@ def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, n
     is_risk = val > 1
     pct = min(100, max(15, val * 16))
     bmi_calc = round(float(weight) / (float(height) ** 2), 2)
-    biomarkers = f"Calculated BMI: {bmi_calc} kg/m² | Height: {height}m | Weight: {weight}kg | Physical Activity Frequency: {faf}/3"
+    biomarkers = f"Calculated BMI: {bmi_calc} kg/m² | Height: {height}m | Weight: {weight}kg | Physical Activity Score: {faf}/3"
     risk_level = f"Classified Category: {lbl}"
-    rec = "Consult with a registered dietitian for tailored caloric management and resistance training recommendations." if is_risk else "Maintain active lifestyle and current caloric balance."
+    rec = "Consult with a registered dietitian for personalized dietary and exercise planning." if is_risk else "Maintain active lifestyle and current caloric balance."
     
-    return create_interactive_result_card("Body Mass Index", lbl, "Attention" if is_risk else "Optimal", pct, rec, biomarkers, risk_level, is_risk=is_risk)
+    return create_interactive_result_card("Body Mass Index", lbl, "Attention" if is_risk else "In-Range", pct, rec, biomarkers, risk_level, is_risk=is_risk)
 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
@@ -287,194 +289,189 @@ def handle_user_login(username, password):
         user_hist = get_user_history(username)
         t, h, d, k, l = get_dashboard_counts(username)
         welcome_html = f"""
-        <div style="background: linear-gradient(135deg, #4F46E5 0%, #312E81 100%); border-radius: 20px; padding: 24px; color: #FFFFFF; display: flex; align-items: center; justify-content: space-between; border: 1px solid #6366F1; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+        <div style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); border-radius: 20px; padding: 22px 26px; color: #FFFFFF; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);">
             <div>
-                <div style="background: rgba(255,255,255,0.15); display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; color: #E0E7FF;">CLINICAL PORTAL ACTIVE</div>
-                <h2 style="margin: 0; font-size: 1.9rem; font-weight: 900; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Welcome, Dr. {username}</h2>
-                <p style="margin: 6px 0 0 0; color: #E0E7FF; font-size: 1rem; font-weight: 500;">Ready for diagnostic triage and automated machine learning evaluation.</p>
+                <div style="background: rgba(255,255,255,0.2); display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.78rem; margin-bottom: 8px; color: #FFFFFF;">CLINICAL PORTAL ACTIVE</div>
+                <h2 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: #FFFFFF;">Welcome, Dr. {username}</h2>
+                <p style="margin: 4px 0 0 0; color: #F3E8FF; font-size: 0.95rem; font-weight: 500;">Ready for automated health diagnostic triage.</p>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 22px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); text-align: right;">
-                <div style="font-size: 0.8rem; color: #94A3B8; font-weight: 700;">SYSTEM DATE</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #38BDF8;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
+            <div style="background: rgba(255, 255, 255, 0.15); padding: 12px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.3); text-align: right;">
+                <div style="font-size: 0.75rem; color: #E9D5FF; font-weight: 700;">SYSTEM DATE</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
             </div>
         </div>
         """
         metrics_html = f"""
-        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 18px;">
-            <div style="background: #1B1E32; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #2D3256;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">📊</div>
-                <div style="color: #9CA3AF; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Total Diagnostics</div>
-                <div style="color: #FFFFFF; font-size: 1.6rem; font-weight: 900; margin-top: 2px;">{t}</div>
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px;">
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #E4E4E7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">📊</div>
+                <div style="color: #71717A; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Total Diagnostics</div>
+                <div style="color: #18181B; font-size: 1.5rem; font-weight: 900; margin-top: 2px;">{t}</div>
             </div>
-            <div style="background: #1B1E32; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #2D3256;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">❤️</div>
-                <div style="color: #9CA3AF; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Heart Records</div>
-                <div style="color: #FFFFFF; font-size: 1.6rem; font-weight: 900; margin-top: 2px;">{h}</div>
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #E4E4E7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">❤️</div>
+                <div style="color: #71717A; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Heart Tests</div>
+                <div style="color: #18181B; font-size: 1.5rem; font-weight: 900; margin-top: 2px;">{h}</div>
             </div>
-            <div style="background: #1B1E32; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #2D3256;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">🩸</div>
-                <div style="color: #9CA3AF; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Diabetes Tests</div>
-                <div style="color: #FFFFFF; font-size: 1.6rem; font-weight: 900; margin-top: 2px;">{d}</div>
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #E4E4E7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">🩸</div>
+                <div style="color: #71717A; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Diabetes Tests</div>
+                <div style="color: #18181B; font-size: 1.5rem; font-weight: 900; margin-top: 2px;">{d}</div>
             </div>
-            <div style="background: #1B1E32; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #2D3256;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">🫘</div>
-                <div style="color: #9CA3AF; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Kidney Panels</div>
-                <div style="color: #FFFFFF; font-size: 1.6rem; font-weight: 900; margin-top: 2px;">{k}</div>
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #E4E4E7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">🫘</div>
+                <div style="color: #71717A; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Kidney Tests</div>
+                <div style="color: #18181B; font-size: 1.5rem; font-weight: 900; margin-top: 2px;">{k}</div>
             </div>
-            <div style="background: #1B1E32; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #2D3256;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">🫀</div>
-                <div style="color: #9CA3AF; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Liver Panels</div>
-                <div style="color: #FFFFFF; font-size: 1.6rem; font-weight: 900; margin-top: 2px;">{l}</div>
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; text-align: center; border: 1px solid #E4E4E7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">🫀</div>
+                <div style="color: #71717A; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Liver Tests</div>
+                <div style="color: #18181B; font-size: 1.5rem; font-weight: 900; margin-top: 2px;">{l}</div>
             </div>
         </div>
         """
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "", username, user_hist, welcome_html, metrics_html
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #FF5A5A; font-weight: bold;'>Invalid credentials. Please verify your login details.</span>", "", [], "", ""
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid credentials. Please try again.</span>", "", [], "", ""
 
 def handle_admin_login(passcode):
     if passcode == ADMIN_SECRET_KEY:
         return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", "", [], "", "", get_all_users()
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #FF5A5A; font-weight: bold;'>Incorrect Admin Key.</span>", "", [], "", "", []
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Incorrect Admin Key.</span>", "", [], "", "", []
 
 def handle_logout():
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", [], "", ""
 
-# --- HIGH-CONTRAST DARK CSS (FIXES ALL TEXT VISIBILITY ISSUES) ---
+# --- SOFT LAVENDER / LIGHT HEALTHCARE CSS THEME ---
 css = """
-/* BASE THEME COLORS */
+/* BASE THEME (MATCHES IMAGE PATTERN) */
 :root {
-    --bg-main: #0B0D17;
-    --card-bg: #151828;
-    --accent-blue: #6366F1;
-    --accent-hover: #4F46E5;
-    --text-bright: #FFFFFF;
-    --text-muted: #D1D5DB;
-    --border-color: #2D3256;
+    --bg-main: #EBE8F9;
+    --card-bg: #FFFFFF;
+    --accent-purple: #7C3AED;
+    --accent-purple-hover: #6D28D9;
+    --text-primary: #18181B;
+    --text-secondary: #71717A;
+    --border-color: #E4E4E7;
 }
 
 body, .gradio-container {
     background-color: var(--bg-main) !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    color: var(--text-bright) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    color: var(--text-primary) !important;
 }
 
-/* CARDS & PANELS */
-.dark-dashboard-card {
+/* CARDS & CONTAINERS */
+.lavender-card {
     background: var(--card-bg) !important;
-    border-radius: 20px !important;
+    border-radius: 24px !important;
     padding: 24px !important;
-    border: 1px solid var(--border-color) !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid #E2E0F0 !important;
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.05) !important;
 }
 
-/* SCROLL PANEL */
+/* SCROLL AREA */
 .scroll-panel {
-    max-height: 540px;
+    max-height: 520px;
     overflow-y: auto !important;
-    padding-right: 10px;
+    padding-right: 8px;
 }
-.scroll-panel::-webkit-scrollbar { width: 8px; }
-.scroll-panel::-webkit-scrollbar-track { background: #121422; border-radius: 10px; }
-.scroll-panel::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+.scroll-panel::-webkit-scrollbar { width: 6px; }
+.scroll-panel::-webkit-scrollbar-track { background: #F4F4F5; border-radius: 10px; }
+.scroll-panel::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 10px; }
 
-/* FIX TAB TEXT VISIBILITY */
+/* TABS STYLING (PURPLE PILLS LIKE UI IMAGE) */
 button[role="tab"] {
-    color: #9CA3AF !important;
-    font-weight: 800 !important;
-    font-size: 0.95rem !important;
-    background: #111322 !important;
-    border: 1px solid var(--border-color) !important;
+    color: #52525B !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    background: #F4F4F5 !important;
+    border: 1px solid #E4E4E7 !important;
     border-radius: 12px !important;
-    padding: 10px 20px !important;
+    padding: 10px 18px !important;
     margin-right: 6px !important;
     transition: all 0.2s ease !important;
 }
 
 button[role="tab"]:hover {
-    color: #FFFFFF !important;
-    background: #1F233A !important;
+    color: #18181B !important;
+    background: #E9D5FF !important;
 }
 
 button[role="tab"][aria-selected="true"] {
     color: #FFFFFF !important;
-    background: var(--accent-blue) !important;
-    border-color: #818CF8 !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+    background: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25) !important;
 }
 
-/* FIX INPUT LABELS & TEXT FIELDS */
+/* INPUT LABELS & TEXT BOXES */
 label span { 
-    color: #F3F4F6 !important; 
+    color: var(--text-primary) !important; 
     font-weight: 700 !important; 
-    font-size: 0.9rem !important; 
+    font-size: 0.88rem !important; 
     margin-bottom: 4px !important;
 }
 
 input, select, textarea, .ts-control {
-    background-color: #0F111E !important;
-    color: #FFFFFF !important;
-    border: 1px solid #373E68 !important;
-    border-radius: 10px !important;
+    background-color: #F8FAFC !important;
+    color: var(--text-primary) !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
     padding: 10px 14px !important;
     font-size: 0.95rem !important;
     font-weight: 600 !important;
 }
 
 input:focus, select:focus, textarea:focus {
-    border-color: #818CF8 !important;
+    border-color: var(--accent-purple) !important;
     outline: none !important;
-    box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2) !important;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15) !important;
 }
 
-/* NUMERIC & DROPDOWN TEXT IN LIGHT MODES (OVERRIDE GRADIO INTERNAL DARKNESS) */
-.gradio-dropdown input, .gradio-number input {
-    color: #FFFFFF !important;
-}
-
-/* PRIMARY ACTION BUTTONS */
+/* PRIMARY BUTTONS */
 button.primary-btn {
-    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important;
     color: #FFFFFF !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     font-weight: 800 !important;
-    font-size: 1.05rem !important;
-    padding: 14px !important;
+    font-size: 1rem !important;
+    padding: 12px !important;
     border: none !important;
-    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.25) !important;
     cursor: pointer !important;
-    margin-top: 14px !important;
+    margin-top: 12px !important;
     transition: transform 0.1s ease, box-shadow 0.2s ease !important;
 }
 
 button.primary-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.35) !important;
 }
 
 /* LOGOUT BUTTON */
 button.logout-btn {
-    background: #2A1724 !important;
-    color: #FF6B81 !important;
-    border: 1px solid #FF3B5C !important;
+    background: #FEE2E2 !important;
+    color: #991B1B !important;
+    border: 1px solid #FCA5A5 !important;
     font-weight: 800 !important;
     border-radius: 12px !important;
     transition: background 0.2s ease !important;
 }
 
 button.logout-btn:hover {
-    background: #3D1C30 !important;
+    background: #FCA5A5 !important;
 }
 
-/* DATAFRAME TEXT VISIBILITY */
+/* DATAFRAME TABLES */
 .dataframe th {
-    background-color: #1E2238 !important;
-    color: #FFFFFF !important;
+    background-color: #F3E8FF !important;
+    color: #6B21A8 !important;
     font-weight: 800 !important;
 }
 
 .dataframe td {
-    background-color: #0F111E !important;
-    color: #E5E7EB !important;
+    background-color: #FFFFFF !important;
+    color: #18181B !important;
     font-weight: 600 !important;
 }
 
@@ -484,84 +481,91 @@ footer { visibility: hidden !important; }
 with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
     current_user_state = gr.State(value="")
 
-    # ------------------ ENHANCED INFORMATIONAL AUTHENTICATION PORTAL ------------------
-    with gr.Column(visible=True, elem_classes=["dark-dashboard-card"]) as auth_view:
+    # ------------------ AUTHENTICATION PORTAL ------------------
+    with gr.Column(visible=True, elem_classes=["lavender-card"]) as auth_view:
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("""
                 # 🏥 **Sick Sense Clinical AI**
-                ### *Next-Generation Machine Learning Health Diagnostics*
+                ### *Soft Lavender Medical Diagnostic Workstation*
                 """)
             with gr.Column(scale=1):
                 gr.HTML("""
-                <div style="background: #111322; border-left: 4px solid #6366F1; padding: 12px 16px; border-radius: 8px;">
-                    <span style="color: #22C55E; font-weight: 800; font-size: 0.85rem;">● SYSTEM ONLINE</span><br/>
-                    <span style="color: #D1D5DB; font-size: 0.85rem; font-weight: 600;">5 Machine Learning Models Loaded (Heart, Diabetes, Kidney, Liver, BMI)</span>
+                <div style="background: #F3E8FF; border-left: 4px solid #7C3AED; padding: 12px 16px; border-radius: 12px;">
+                    <span style="color: #6B21A8; font-weight: 800; font-size: 0.85rem;">● SYSTEM ONLINE</span><br/>
+                    <span style="color: #4C1D95; font-size: 0.85rem; font-weight: 600;">5 Diagnostic Machine Learning Models Loaded</span>
                 </div>
                 """)
 
         gr.Markdown("---")
 
         with gr.Row():
-            # LEFT: LOGIN & REGISTRATION FORM
+            # LOGIN & REGISTRATION FORM
             with gr.Column(scale=1.2):
                 with gr.Tabs():
                     with gr.Tab("🔑 Sign In"):
-                        username_input = gr.Textbox(label="Username", placeholder="Enter your medical license / username")
-                        password_input = gr.Textbox(label="Password", type="password", placeholder="Enter secure password")
+                        username_input = gr.Textbox(label="Username", placeholder="Enter your registered username")
+                        password_input = gr.Textbox(label="Password", type="password", placeholder="Enter your password")
                         login_btn = gr.Button("Sign In to Workstation", elem_classes=["primary-btn"])
                         login_msg = gr.HTML("")
 
                     with gr.Tab("📝 Create Account"):
                         new_username = gr.Textbox(label="New Username", placeholder="Choose account username")
-                        new_password = gr.Textbox(label="New Password", type="password", placeholder="Choose password")
+                        new_password = gr.Textbox(label="New Password", type="password", placeholder="At least 8 characters long")
                         confirm_password = gr.Textbox(label="Confirm Password", type="password", placeholder="Re-enter password")
+                        
+                        gr.HTML("""
+                        <div style="font-size: 0.8rem; color: #6B21A8; margin-bottom: 8px; font-weight: 600;">
+                            🔒 <strong>Security Requirement:</strong> Password must be at least 8 characters long.
+                        </div>
+                        """)
+                        
                         signup_btn = gr.Button("Register New Account", elem_classes=["primary-btn"])
                         signup_msg = gr.HTML("")
 
                     with gr.Tab("🛡️ Admin Portal"):
-                        admin_key_input = gr.Textbox(label="Admin Key", type="password", placeholder="Enter administrative key")
+                        admin_key_input = gr.Textbox(label="Admin Key", type="password", placeholder="Enter administrative passcode")
                         admin_login_btn = gr.Button("Access Admin Management Panel", elem_classes=["primary-btn"])
                         admin_msg = gr.HTML("")
 
-            # RIGHT: CLINICAL SYSTEM INFORMATION CARDS
+            # CLINICAL SYSTEM INFORMATION CARDS
             with gr.Column(scale=1):
                 gr.HTML("""
-                <div style="background: #111322; border: 1px solid #2D3256; border-radius: 16px; padding: 20px;">
-                    <h3 style="color: #FFFFFF; margin-top:0; font-size: 1.1rem; font-weight: 800;">💡 System Capability Brief</h3>
-                    <ul style="color: #D1D5DB; font-size: 0.88rem; line-height: 1.7; padding-left: 20px; margin-bottom: 0;">
-                        <li><strong style="color: #818CF8;">Cardiovascular Risk:</strong> Evaluates 13 heart biomarkers including ST depression and resting blood pressure.</li>
-                        <li><strong style="color: #818CF8;">Glycemic Analysis:</strong> Assesses HbA1c, fasting glucose levels, and BMI indexes.</li>
-                        <li><strong style="color: #818CF8;">Renal & Hepatic Panels:</strong> Measures serum creatinine, eGFR, direct bilirubin, and transaminase balances.</li>
-                        <li><strong style="color: #818CF8;">Automated Tracking:</strong> Saves every diagnostic result into an encrypted persistent medical database.</li>
+                <div style="background: #FAF5FF; border: 1px solid #E9D5FF; border-radius: 18px; padding: 20px;">
+                    <h3 style="color: #6B21A8; margin-top:0; font-size: 1.1rem; font-weight: 800;">💡 System Capability Brief</h3>
+                    <ul style="color: #3B0764; font-size: 0.88rem; line-height: 1.7; padding-left: 20px; margin-bottom: 0;">
+                        <li><strong style="color: #7C3AED;">Cardiovascular Risk:</strong> Evaluates 13 cardiac biomarkers including ST depression and resting blood pressure.</li>
+                        <li><strong style="color: #7C3AED;">Glycemic Analysis:</strong> Assesses HbA1c, fasting glucose levels, and BMI indexes.</li>
+                        <li><strong style="color: #7C3AED;">Renal & Hepatic Panels:</strong> Measures serum creatinine, eGFR, bilirubin, and transaminase balances.</li>
+                        <li><strong style="color: #7C3AED;">Automated Log Tracking:</strong> Saves every diagnostic result into an encrypted database.</li>
                     </ul>
                 </div>
                 """)
 
     # ------------------ MAIN CLINICAL DASHBOARD ------------------
-    with gr.Row(visible=False, elem_classes=["dark-dashboard-card"]) as user_dashboard_view:
+    with gr.Row(visible=False, elem_classes=["lavender-card"]) as user_dashboard_view:
         # LEFT NAVIGATION SIDEBAR
         with gr.Column(scale=1, min_width=200):
             gr.HTML("""
             <div style="text-align: center; padding-bottom: 12px;">
-                <div style="font-size: 2.2rem;">🏥</div>
-                <div style="font-weight: 900; color: #FFFFFF; font-size: 1.2rem; margin-top: 4px;">Sick Sense</div>
-                <div style="color: #818CF8; font-size: 0.75rem; font-weight: 700;">CLINICAL WORKSTATION</div>
+                <div style="font-size: 2.2rem;">🧪</div>
+                <div style="font-weight: 900; color: #18181B; font-size: 1.2rem; margin-top: 4px;">Sick Sense</div>
+                <div style="color: #7C3AED; font-size: 0.75rem; font-weight: 700;">CLINICAL WORKSTATION</div>
             </div>
             """)
             gr.Markdown("---")
             gr.HTML("""
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="background: #252945; color: #FFFFFF; padding: 10px 14px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; border-left: 4px solid #6366F1;">
+                <div style="background: #F3E8FF; color: #6B21A8; padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; border-left: 4px solid #7C3AED;">
                     🏠 Workstation Dashboard
                 </div>
-                <div style="color: #9CA3AF; padding: 10px 14px; font-weight: 600; font-size: 0.9rem;">
+                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
                     📅 Patient Appointments
                 </div>
-                <div style="color: #9CA3AF; padding: 10px 14px; font-weight: 600; font-size: 0.9rem;">
-                    📊 Analytics & Reports
+                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
+                    📊 Diagnostics & Reports
                 </div>
-                <div style="color: #9CA3AF; padding: 10px 14px; font-weight: 600; font-size: 0.9rem;">
+                <div style="color: #71717A; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
                     ⚙️ Workstation Settings
                 </div>
             </div>
@@ -699,7 +703,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         refresh_history_btn = gr.Button("🔄 Refresh Saved Records", elem_classes=["primary-btn"])
 
     # ------------------ ADMIN PANEL PAGE ------------------
-    with gr.Column(visible=False, elem_classes=["dark-dashboard-card"]) as admin_dashboard_view:
+    with gr.Column(visible=False, elem_classes=["lavender-card"]) as admin_dashboard_view:
         with gr.Row():
             gr.Markdown("### 🛡️ Administrative Database Management")
             admin_logout_btn = gr.Button("Exit Panel", elem_classes=["logout-btn"], scale=0, min_width=120)
