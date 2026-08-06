@@ -5,9 +5,11 @@ import gradio as gr
 import joblib
 import numpy as np
 
-# --- DATABASE SETUP ---
+# --- CONFIGURATION ---
 DB_FILE = "users.db"
+ADMIN_SECRET_KEY = "admin@123"  # Change this to your preferred admin password
 
+# --- DATABASE SETUP ---
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -21,7 +23,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Initialize DB on app startup
 init_db()
 
 def hash_password(password):
@@ -51,10 +52,32 @@ def verify_user(username, password):
     cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username.strip(),))
     row = cursor.fetchone()
     conn.close()
+    return True if row and row[0] == hash_password(password) else False
+
+# --- ADMIN DATABASE FUNCTIONS ---
+def get_all_users():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username FROM users")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def delete_user_by_username(username_to_delete):
+    username_to_delete = username_to_delete.strip()
+    if not username_to_delete:
+        return "❌ Please enter a valid username."
+        
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE username = ?", (username_to_delete,))
+    deleted_count = cursor.rowcount
+    conn.commit()
+    conn.close()
     
-    if row and row[0] == hash_password(password):
-        return True
-    return False
+    if deleted_count > 0:
+        return f"✅ User '{username_to_delete}' deleted successfully."
+    return "❌ User not found."
 
 # --- LOAD MODELS ---
 heart_model = joblib.load("heart diagn.pkl")
@@ -99,14 +122,19 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     return label_map[int(obesity_model.predict(data)[0])]
 
-# --- AUTH HANDLERS ---
-def handle_login(username, password):
+# --- NAVIGATION HANDLERS ---
+def handle_user_login(username, password):
     if verify_user(username, password):
-        return gr.update(visible=False), gr.update(visible=True), ""
-    return gr.update(visible=True), gr.update(visible=False), "❌ Invalid username or password."
+        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), ""
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Invalid username or password."
+
+def handle_admin_login(passcode):
+    if passcode == ADMIN_SECRET_KEY:
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", get_all_users()
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ Incorrect Admin Secret Key.", []
 
 def handle_logout():
-    return gr.update(visible=True), gr.update(visible=False), "", ""
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", ""
 
 # --- STYLING ---
 css = """
@@ -125,125 +153,37 @@ body, .gradio-container {
     font-family: system-ui, -apple-system, sans-serif !important;
 }
 
-/* Header */
-.main-title {
-    text-align: center;
-    color: #FFFFFF;
-    margin-bottom: 24px;
-}
-.main-title h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin: 0;
-    line-height: 1.1;
-}
-.main-title p {
-    color: var(--accent-mint);
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin-top: 8px;
-}
+.main-title { text-align: center; color: #FFFFFF; margin-bottom: 24px; }
+.main-title h1 { font-size: 2.5rem; font-weight: 800; margin: 0; line-height: 1.1; }
+.main-title p { color: var(--accent-mint); font-size: 1.1rem; font-weight: 500; margin-top: 8px; }
 
-/* Auth Card Layout */
-.login-card {
-    max-width: 440px;
-    margin: 30px auto !important;
-    padding: 24px;
-}
+.auth-card { max-width: 460px; margin: 20px auto !important; padding: 24px; }
 
-/* High-Contrast Tabs Navigation */
 button[role="tab"] {
-    color: #A3E6CD !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
-    background: transparent !important;
-    border: none !important;
-    opacity: 0.85 !important;
+    color: #A3E6CD !important; font-weight: 700 !important; font-size: 1.05rem !important;
+    background: transparent !important; border: none !important; opacity: 0.85 !important;
 }
+button[role="tab"]:hover { color: #FFFFFF !important; opacity: 1 !important; }
+button[role="tab"][aria-selected="true"] { color: #FFFFFF !important; opacity: 1 !important; border-bottom: 4px solid #A3E6CD !important; }
 
-button[role="tab"]:hover {
-    color: #FFFFFF !important;
-    opacity: 1 !important;
-}
-
-button[role="tab"][aria-selected="true"] {
-    color: #FFFFFF !important;
-    opacity: 1 !important;
-    border-bottom: 4px solid #A3E6CD !important;
-}
-
-.tabs {
-    background: transparent !important;
-    border: none !important;
-}
-
-.tab-nav {
-    border-bottom: 2px solid rgba(163, 230, 205, 0.3) !important;
-}
-
-/* Form Container & Input High Contrast */
 .block, .form {
-    background: var(--card-bg) !important;
-    border-radius: 16px !important;
-    border: none !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    background: var(--card-bg) !important; border-radius: 16px !important;
+    border: none !important; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
 }
 
-label span, .block label span, span.text-gray-500 {
-    color: var(--text-muted) !important;
-    font-weight: 700 !important;
-    font-size: 0.9rem !important;
-}
+label span, .block label span, span.text-gray-500 { color: var(--text-muted) !important; font-weight: 700 !important; font-size: 0.9rem !important; }
+input, select, textarea, .wrapper { background-color: var(--input-bg) !important; color: var(--text-main) !important; font-weight: 600 !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; }
 
-input, select, textarea, .wrapper {
-    background-color: var(--input-bg) !important;
-    color: var(--text-main) !important;
-    font-weight: 600 !important;
-    border: 1px solid #CBD5E1 !important;
-    border-radius: 8px !important;
-}
-
-input:focus, select:focus {
-    border-color: #10B981 !important;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
-}
-
-/* Primary Action Buttons */
 button.primary-btn {
-    background-color: var(--btn-dark) !important;
-    color: #FFFFFF !important;
-    border-radius: 12px !important;
-    font-weight: 800 !important;
-    font-size: 1.1rem !important;
-    padding: 14px !important;
-    border: 2px solid var(--accent-mint) !important;
-    cursor: pointer;
-    margin-top: 10px;
+    background-color: var(--btn-dark) !important; color: #FFFFFF !important; border-radius: 12px !important;
+    font-weight: 800 !important; font-size: 1.1rem !important; padding: 12px !important;
+    border: 2px solid var(--accent-mint) !important; cursor: pointer; margin-top: 10px;
 }
+button.primary-btn:hover { background-color: #0d4a31 !important; color: var(--accent-mint) !important; }
 
-button.primary-btn:hover {
-    background-color: #0d4a31 !important;
-    color: var(--accent-mint) !important;
-}
+button.logout-btn { background-color: transparent !important; color: #FF8A8A !important; border: 1px solid #FF8A8A !important; font-weight: 700 !important; border-radius: 8px !important; }
 
-/* Logout Button */
-button.logout-btn {
-    background-color: transparent !important;
-    color: #FF8A8A !important;
-    border: 1px solid #FF8A8A !important;
-    font-weight: 700 !important;
-    border-radius: 8px !important;
-}
-
-/* Result Textbox */
-.output-box textarea {
-    background-color: #DCFCE7 !important;
-    color: #065F46 !important;
-    font-weight: 800 !important;
-    font-size: 1.2rem !important;
-    text-align: center;
-}
-
+.output-box textarea { background-color: #DCFCE7 !important; color: #065F46 !important; font-weight: 800 !important; font-size: 1.2rem !important; text-align: center; }
 footer { visibility: hidden !important; }
 """
 
@@ -257,29 +197,35 @@ header = """
 with gr.Blocks(css=css, title="Sick Sense") as demo:
     gr.HTML(header)
 
-    # ------------------ LOGIN / REGISTER SCREEN ------------------
-    with gr.Column(visible=True, elem_classes=["login-card"]) as login_view:
+    # ------------------ AUTHENTICATION PORTAL ------------------
+    with gr.Column(visible=True, elem_classes=["auth-card"]) as auth_view:
         with gr.Tabs():
-            # Sign In Tab
-            with gr.Tab("Sign In"):
+            # User Sign In
+            with gr.Tab("User Sign In"):
                 username_input = gr.Textbox(label="Username", placeholder="Enter username")
                 password_input = gr.Textbox(label="Password", type="password", placeholder="Enter password")
                 login_btn = gr.Button("Sign In", elem_classes=["primary-btn"])
                 login_msg = gr.Markdown("")
 
-            # Sign Up Tab
-            with gr.Tab("Create Account"):
+            # User Registration
+            with gr.Tab("Register Account"):
                 new_username = gr.Textbox(label="New Username", placeholder="Choose username")
                 new_password = gr.Textbox(label="New Password", type="password", placeholder="Choose password")
                 confirm_password = gr.Textbox(label="Confirm Password", type="password", placeholder="Re-enter password")
                 signup_btn = gr.Button("Register", elem_classes=["primary-btn"])
                 signup_msg = gr.Markdown("")
 
+            # Admin Access Portal
+            with gr.Tab("🛡️ Admin Portal"):
+                admin_key_input = gr.Textbox(label="Admin Passcode", type="password", placeholder="Enter admin passcode")
+                admin_login_btn = gr.Button("Access Database Dashboard", elem_classes=["primary-btn"])
+                admin_msg = gr.Markdown("")
+
     # ------------------ PREDICTION DASHBOARD ------------------
-    with gr.Column(visible=False) as main_view:
+    with gr.Column(visible=False) as user_dashboard_view:
         with gr.Row():
-            gr.Markdown("### Welcome back! Select a diagnosis category below.")
-            logout_btn = gr.Button("Log Out", elem_classes=["logout-btn"], scale=0, min_width=100)
+            gr.Markdown("### Welcome! Select a diagnosis category below.")
+            user_logout_btn = gr.Button("Log Out", elem_classes=["logout-btn"], scale=0, min_width=100)
 
         with gr.Tabs():
             # Heart Tab
@@ -396,6 +342,28 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
                     obesity_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
                     obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
 
+    # ------------------ ADMIN DASHBOARD PAGE ------------------
+    with gr.Column(visible=False) as admin_dashboard_view:
+        with gr.Row():
+            gr.Markdown("### 🛡️ Secure Admin Database Management")
+            admin_logout_btn = gr.Button("Exit Dashboard", elem_classes=["logout-btn"], scale=0, min_width=130)
+
+        with gr.Column():
+            gr.Markdown("#### Registered Users in Database")
+            user_table = gr.Dataframe(
+                headers=["User ID", "Username"],
+                value=[],
+                interactive=False
+            )
+            refresh_btn = gr.Button("🔄 Refresh Database View")
+
+            gr.Markdown("---")
+            gr.Markdown("#### Delete User Record")
+            with gr.Row():
+                user_to_delete = gr.Textbox(label="Target Username", placeholder="Enter username to delete")
+                delete_user_btn = gr.Button("Remove User", elem_classes=["primary-btn"])
+            admin_action_msg = gr.Markdown("")
+
     # ------------------ EVENT LISTENERS ------------------
     signup_btn.click(
         register_user,
@@ -404,15 +372,43 @@ with gr.Blocks(css=css, title="Sick Sense") as demo:
     )
 
     login_btn.click(
-        handle_login,
+        handle_user_login,
         inputs=[username_input, password_input],
-        outputs=[login_view, main_view, login_msg]
+        outputs=[auth_view, user_dashboard_view, admin_dashboard_view, login_msg]
     )
 
-    logout_btn.click(
+    admin_login_btn.click(
+        handle_admin_login,
+        inputs=[admin_key_input],
+        outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_msg, user_table]
+    )
+
+    user_logout_btn.click(
         handle_logout,
         inputs=[],
-        outputs=[login_view, main_view, username_input, password_input]
+        outputs=[auth_view, user_dashboard_view, admin_dashboard_view, username_input, password_input]
+    )
+
+    admin_logout_btn.click(
+        handle_logout,
+        inputs=[],
+        outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_key_input, admin_msg]
+    )
+
+    refresh_btn.click(
+        get_all_users,
+        inputs=[],
+        outputs=[user_table]
+    )
+
+    delete_user_btn.click(
+        delete_user_by_username,
+        inputs=[user_to_delete],
+        outputs=[admin_action_msg]
+    ).then(
+        get_all_users,
+        inputs=[],
+        outputs=[user_table]
     )
 
 if __name__ == "__main__":
