@@ -10,6 +10,13 @@ kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
+# User Credentials Database (Username: Password)
+USERS = {
+    "admin": "admin123",
+    "doctor": "health2026",
+    "user": "password"
+}
+
 # Prediction Functions
 def predict_heart(age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
     data = np.array([[float(age), float(sex), float(cp), float(trestbps), float(chol),
@@ -45,6 +52,15 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(fcvc), float(ncp), caec_map[caec], yesno[smoke], float(ch2o), yesno[scc],
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     return label_map[int(obesity_model.predict(data)[0])]
+
+# Auth Handlers
+def handle_login(username, password):
+    if username in USERS and USERS[username] == password:
+        return gr.update(visible=False), gr.update(visible=True), ""
+    return gr.update(visible=True), gr.update(visible=False), "❌ Invalid username or password."
+
+def handle_logout():
+    return gr.update(visible=True), gr.update(visible=False), "", ""
 
 # High-Contrast Custom CSS
 css = """
@@ -82,7 +98,14 @@ body, .gradio-container {
     margin-top: 8px;
 }
 
-/* Fixed High-Contrast Tabs Navigation */
+/* Auth Section */
+.login-card {
+    max-width: 420px;
+    margin: 40px auto !important;
+    padding: 24px;
+}
+
+/* High-Contrast Tabs Navigation */
 button[role="tab"] {
     color: #A3E6CD !important;
     font-weight: 700 !important;
@@ -157,6 +180,15 @@ button.primary-btn:hover {
     color: var(--accent-mint) !important;
 }
 
+/* Logout Button */
+button.logout-btn {
+    background-color: transparent !important;
+    color: #FF8A8A !important;
+    border: 1px solid #FF8A8A !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+}
+
 /* Result Textbox */
 .output-box textarea {
     background-color: #DCFCE7 !important;
@@ -179,120 +211,147 @@ header = """
 with gr.Blocks(css=css, title="Sick Sense") as demo:
     gr.HTML(header)
 
-    with gr.Tabs():
-        # Heart Tab
-        with gr.Tab("Heart"):
-            with gr.Column():
-                with gr.Row():
-                    age = gr.Number(label="Age", value=45)
-                    sex = gr.Dropdown(["0", "1"], value="1", label="Sex (1=Male, 0=Female)")
-                    cp = gr.Dropdown(["0", "1", "2", "3"], value="0", label="Chest Pain Type")
-                with gr.Row():
-                    trestbps = gr.Number(label="Resting BP (mm Hg)", value=130)
-                    chol = gr.Number(label="Cholesterol (mg/dl)", value=250)
-                    fbs = gr.Dropdown(["0", "1"], value="0", label="Fasting Sugar (>120 mg/dl)")
-                with gr.Row():
-                    restecg = gr.Dropdown(["0", "1", "2"], value="1", label="Rest ECG")
-                    thalach = gr.Number(label="Max Heart Rate", value=150)
-                    exang = gr.Dropdown(["0", "1"], value="0", label="Exercise Angina")
-                with gr.Row():
-                    oldpeak = gr.Number(label="ST Depression", value=1.2)
-                    slope = gr.Dropdown(["0", "1", "2"], value="2", label="Slope")
-                    ca = gr.Dropdown(["0", "1", "2", "3", "4"], value="0", label="Major Vessels")
-                    thal = gr.Dropdown(["0", "1", "2", "3"], value="2", label="Thal")
+    # ------------------ LOGIN SCREEN (STARTUP) ------------------
+    with gr.Column(visible=True, elem_classes=["login-card"]) as login_view:
+        gr.Markdown("### 🔒 Sign In to Access Diagnostics")
+        username_input = gr.Textbox(label="Username", placeholder="Enter username")
+        password_input = gr.Textbox(label="Password", type="password", placeholder="Enter password")
+        login_btn = gr.Button("Sign In", elem_classes=["primary-btn"])
+        login_msg = gr.Markdown("", elem_id="login-msg")
 
-                heart_btn = gr.Button("Analyze Heart Health", elem_classes=["primary-btn"])
-                heart_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
-                heart_btn.click(predict_heart, inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output)
+    # ------------------ PREDICTION DASHBOARD ------------------
+    with gr.Column(visible=False) as main_view:
+        with gr.Row():
+            gr.Markdown("### Welcome back! Select a diagnosis category below.")
+            logout_btn = gr.Button("Log Out", elem_classes=["logout-btn"], scale=0, min_width=100)
 
-        # Diabetes Tab
-        with gr.Tab("Diabetes"):
-            with gr.Column():
-                with gr.Row():
-                    gender = gr.Dropdown(["Female", "Male", "Other"], value="Male", label="Gender")
-                    d_age = gr.Number(label="Age", value=40)
-                with gr.Row():
-                    hypertension = gr.Dropdown([0, 1], value=0, label="Hypertension (0=No, 1=Yes)")
-                    heart_disease = gr.Dropdown([0, 1], value=0, label="Heart Disease (0=No, 1=Yes)")
-                smoking = gr.Dropdown(["Never", "No Info", "Current", "Former", "Ever", "Not Current"], value="Never", label="Smoking History")
-                with gr.Row():
-                    bmi = gr.Number(label="BMI", value=24)
-                    hba1c = gr.Number(label="HbA1c Level", value=5.6)
-                    glucose = gr.Number(label="Blood Glucose", value=110)
+        with gr.Tabs():
+            # Heart Tab
+            with gr.Tab("Heart"):
+                with gr.Column():
+                    with gr.Row():
+                        age = gr.Number(label="Age", value=45)
+                        sex = gr.Dropdown(["0", "1"], value="1", label="Sex (1=Male, 0=Female)")
+                        cp = gr.Dropdown(["0", "1", "2", "3"], value="0", label="Chest Pain Type")
+                    with gr.Row():
+                        trestbps = gr.Number(label="Resting BP (mm Hg)", value=130)
+                        chol = gr.Number(label="Cholesterol (mg/dl)", value=250)
+                        fbs = gr.Dropdown(["0", "1"], value="0", label="Fasting Sugar (>120 mg/dl)")
+                    with gr.Row():
+                        restecg = gr.Dropdown(["0", "1", "2"], value="1", label="Rest ECG")
+                        thalach = gr.Number(label="Max Heart Rate", value=150)
+                        exang = gr.Dropdown(["0", "1"], value="0", label="Exercise Angina")
+                    with gr.Row():
+                        oldpeak = gr.Number(label="ST Depression", value=1.2)
+                        slope = gr.Dropdown(["0", "1", "2"], value="2", label="Slope")
+                        ca = gr.Dropdown(["0", "1", "2", "3", "4"], value="0", label="Major Vessels")
+                        thal = gr.Dropdown(["0", "1", "2", "3"], value="2", label="Thal")
 
-                diabetes_btn = gr.Button("Analyze Diabetes Risk", elem_classes=["primary-btn"])
-                diabetes_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
-                diabetes_btn.click(predict_diabetes, inputs=[gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output)
+                    heart_btn = gr.Button("Analyze Heart Health", elem_classes=["primary-btn"])
+                    heart_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
+                    heart_btn.click(predict_heart, inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output)
 
-        # Kidney Tab
-        with gr.Tab("Kidney"):
-            with gr.Column():
-                with gr.Row():
-                    k_age = gr.Number(label="Age", value=48)
-                    k_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
-                    k_bp = gr.Number(label="Blood Pressure", value=80)
-                with gr.Row():
-                    k_creatinine = gr.Number(label="Serum Creatinine", value=1.2)
-                    k_urea = gr.Number(label="Blood Urea", value=36)
-                    k_hb = gr.Number(label="Hemoglobin", value=15.4)
-                with gr.Row():
-                    k_rbc = gr.Number(label="Red Blood Cells", value=5.2)
-                    k_hypertension = gr.Dropdown(["No", "Yes"], value="No", label="Hypertension")
-                    k_egfr = gr.Number(label="eGFR", value=90)
-                    k_albumin = gr.Dropdown(["No", "Yes"], value="No", label="Albumin")
+            # Diabetes Tab
+            with gr.Tab("Diabetes"):
+                with gr.Column():
+                    with gr.Row():
+                        gender = gr.Dropdown(["Female", "Male", "Other"], value="Male", label="Gender")
+                        d_age = gr.Number(label="Age", value=40)
+                    with gr.Row():
+                        hypertension = gr.Dropdown([0, 1], value=0, label="Hypertension (0=No, 1=Yes)")
+                        heart_disease = gr.Dropdown([0, 1], value=0, label="Heart Disease (0=No, 1=Yes)")
+                    smoking = gr.Dropdown(["Never", "No Info", "Current", "Former", "Ever", "Not Current"], value="Never", label="Smoking History")
+                    with gr.Row():
+                        bmi = gr.Number(label="BMI", value=24)
+                        hba1c = gr.Number(label="HbA1c Level", value=5.6)
+                        glucose = gr.Number(label="Blood Glucose", value=110)
 
-                kidney_btn = gr.Button("Analyze Kidney Health", elem_classes=["primary-btn"])
-                kidney_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
-                kidney_btn.click(predict_kidney, inputs=[k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output)
+                    diabetes_btn = gr.Button("Analyze Diabetes Risk", elem_classes=["primary-btn"])
+                    diabetes_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
+                    diabetes_btn.click(predict_diabetes, inputs=[gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output)
 
-        # Liver Tab
-        with gr.Tab("Liver"):
-            with gr.Column():
-                with gr.Row():
-                    l_age = gr.Number(label="Age", value=65)
-                    l_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
-                    l_tb = gr.Number(label="Total Bilirubin", value=0.7)
-                with gr.Row():
-                    l_db = gr.Number(label="Direct Bilirubin", value=0.1)
-                    l_alk = gr.Number(label="Alkaline Phosphatase", value=187)
-                    l_sgpt = gr.Number(label="SGPT", value=16)
-                with gr.Row():
-                    l_sgot = gr.Number(label="SGOT", value=18)
-                    l_proteins = gr.Number(label="Total Proteins", value=6.8)
-                    l_albumin = gr.Number(label="Albumin", value=3.3)
-                    l_ratio = gr.Number(label="A/G Ratio", value=0.9)
+            # Kidney Tab
+            with gr.Tab("Kidney"):
+                with gr.Column():
+                    with gr.Row():
+                        k_age = gr.Number(label="Age", value=48)
+                        k_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
+                        k_bp = gr.Number(label="Blood Pressure", value=80)
+                    with gr.Row():
+                        k_creatinine = gr.Number(label="Serum Creatinine", value=1.2)
+                        k_urea = gr.Number(label="Blood Urea", value=36)
+                        k_hb = gr.Number(label="Hemoglobin", value=15.4)
+                    with gr.Row():
+                        k_rbc = gr.Number(label="Red Blood Cells", value=5.2)
+                        k_hypertension = gr.Dropdown(["No", "Yes"], value="No", label="Hypertension")
+                        k_egfr = gr.Number(label="eGFR", value=90)
+                        k_albumin = gr.Dropdown(["No", "Yes"], value="No", label="Albumin")
 
-                liver_btn = gr.Button("Analyze Liver Health", elem_classes=["primary-btn"])
-                liver_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
-                liver_btn.click(predict_liver, inputs=[l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output)
+                    kidney_btn = gr.Button("Analyze Kidney Health", elem_classes=["primary-btn"])
+                    kidney_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
+                    kidney_btn.click(predict_kidney, inputs=[k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output)
 
-        # Obesity Tab
-        with gr.Tab("Obesity"):
-            with gr.Column():
-                with gr.Row():
-                    o_gender = gr.Dropdown(["Female", "Male"], value="Male", label="Gender")
-                    o_age = gr.Number(label="Age", value=21)
-                    o_height = gr.Number(label="Height (m)", value=1.70)
-                    o_weight = gr.Number(label="Weight (kg)", value=70)
-                with gr.Row():
-                    o_family = gr.Dropdown(["No", "Yes"], value="Yes", label="Family Overweight History")
-                    o_favc = gr.Dropdown(["No", "Yes"], value="Yes", label="High Caloric Food")
-                    o_fcvc = gr.Number(label="Veggie Frequency (1-3)", value=2)
-                    o_ncp = gr.Number(label="Meals Per Day (1-4)", value=3)
-                with gr.Row():
-                    o_caec = gr.Dropdown(["No", "Sometimes", "Frequently", "Always"], value="Sometimes", label="Snack Frequency")
-                    o_smoke = gr.Dropdown(["No", "Yes"], value="No", label="Smoker")
-                    o_ch2o = gr.Number(label="Water Intake (1-3)", value=2)
-                    o_scc = gr.Dropdown(["No", "Yes"], value="No", label="Calorie Tracking")
-                with gr.Row():
-                    o_faf = gr.Number(label="Physical Activity (0-3)", value=1)
-                    o_tue = gr.Number(label="Screen Time (0-2)", value=1)
-                    o_calc = gr.Dropdown(["No", "Sometimes", "Frequently", "Always"], value="Sometimes", label="Alcohol Intake")
-                    o_mtrans = gr.Dropdown(["Public Transportation", "Walking", "Automobile", "Motorbike", "Bike"], value="Public Transportation", label="Transport")
+            # Liver Tab
+            with gr.Tab("Liver"):
+                with gr.Column():
+                    with gr.Row():
+                        l_age = gr.Number(label="Age", value=65)
+                        l_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
+                        l_tb = gr.Number(label="Total Bilirubin", value=0.7)
+                    with gr.Row():
+                        l_db = gr.Number(label="Direct Bilirubin", value=0.1)
+                        l_alk = gr.Number(label="Alkaline Phosphatase", value=187)
+                        l_sgpt = gr.Number(label="SGPT", value=16)
+                    with gr.Row():
+                        l_sgot = gr.Number(label="SGOT", value=18)
+                        l_proteins = gr.Number(label="Total Proteins", value=6.8)
+                        l_albumin = gr.Number(label="Albumin", value=3.3)
+                        l_ratio = gr.Number(label="A/G Ratio", value=0.9)
 
-                obesity_btn = gr.Button("Analyze Obesity Category", elem_classes=["primary-btn"])
-                obesity_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
-                obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
+                    liver_btn = gr.Button("Analyze Liver Health", elem_classes=["primary-btn"])
+                    liver_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
+                    liver_btn.click(predict_liver, inputs=[l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output)
+
+            # Obesity Tab
+            with gr.Tab("Obesity"):
+                with gr.Column():
+                    with gr.Row():
+                        o_gender = gr.Dropdown(["Female", "Male"], value="Male", label="Gender")
+                        o_age = gr.Number(label="Age", value=21)
+                        o_height = gr.Number(label="Height (m)", value=1.70)
+                        o_weight = gr.Number(label="Weight (kg)", value=70)
+                    with gr.Row():
+                        o_family = gr.Dropdown(["No", "Yes"], value="Yes", label="Family Overweight History")
+                        o_favc = gr.Dropdown(["No", "Yes"], value="Yes", label="High Caloric Food")
+                        o_fcvc = gr.Number(label="Veggie Frequency (1-3)", value=2)
+                        o_ncp = gr.Number(label="Meals Per Day (1-4)", value=3)
+                    with gr.Row():
+                        o_caec = gr.Dropdown(["No", "Sometimes", "Frequently", "Always"], value="Sometimes", label="Snack Frequency")
+                        o_smoke = gr.Dropdown(["No", "Yes"], value="No", label="Smoker")
+                        o_ch2o = gr.Number(label="Water Intake (1-3)", value=2)
+                        o_scc = gr.Dropdown(["No", "Yes"], value="No", label="Calorie Tracking")
+                    with gr.Row():
+                        o_faf = gr.Number(label="Physical Activity (0-3)", value=1)
+                        o_tue = gr.Number(label="Screen Time (0-2)", value=1)
+                        o_calc = gr.Dropdown(["No", "Sometimes", "Frequently", "Always"], value="Sometimes", label="Alcohol Intake")
+                        o_mtrans = gr.Dropdown(["Public Transportation", "Walking", "Automobile", "Motorbike", "Bike"], value="Public Transportation", label="Transport")
+
+                    obesity_btn = gr.Button("Analyze Obesity Category", elem_classes=["primary-btn"])
+                    obesity_output = gr.Textbox(label="Result", interactive=False, elem_classes=["output-box"])
+                    obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
+
+    # ------------------ EVENT LISTENERS ------------------
+    login_btn.click(
+        handle_login,
+        inputs=[username_input, password_input],
+        outputs=[login_view, main_view, login_msg]
+    )
+
+    logout_btn.click(
+        handle_logout,
+        inputs=[],
+        outputs=[login_view, main_view, username_input, password_input]
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
