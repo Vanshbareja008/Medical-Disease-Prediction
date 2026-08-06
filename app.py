@@ -374,7 +374,12 @@ body, .gradio-container {
 .scroll-panel::-webkit-scrollbar-track { background: #F4F4F5; border-radius: 10px; }
 .scroll-panel::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 10px; }
 
-/* HORIZONTAL SCROLLABLE TABS CONTAINER */
+/* HORIZONTALLY SCROLLABLE TABS CONTAINER FIX */
+.horizontal-tabs-container {
+    overflow: visible !important;
+}
+
+.horizontal-tabs-container > div:first-child,
 .horizontal-tabs-container div.tab-nav {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -382,23 +387,29 @@ body, .gradio-container {
     overflow-y: hidden !important;
     white-space: nowrap !important;
     padding-bottom: 8px !important;
+    padding-right: 28px !important;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
-.horizontal-tabs-container div.tab-nav::-webkit-scrollbar {
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar,
+.horizontal-tabs-container > div:first-child::-webkit-scrollbar {
     height: 6px;
 }
-.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-track {
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-track,
+.horizontal-tabs-container > div:first-child::-webkit-scrollbar-track {
     background: #F4F4F5;
     border-radius: 10px;
 }
-.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-thumb {
+.horizontal-tabs-container div.tab-nav::-webkit-scrollbar-thumb,
+.horizontal-tabs-container > div:first-child::-webkit-scrollbar-thumb {
     background: #C4B5FD;
     border-radius: 10px;
 }
 
-button[role="tab"] {
+.horizontal-tabs-container button[role="tab"] {
     color: #52525B !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
@@ -408,15 +419,16 @@ button[role="tab"] {
     padding: 10px 18px !important;
     margin-right: 8px !important;
     flex-shrink: 0 !important;
+    min-width: max-content !important;
     transition: all 0.2s ease !important;
 }
 
-button[role="tab"]:hover {
+.horizontal-tabs-container button[role="tab"]:hover {
     color: #18181B !important;
     background: #E9D5FF !important;
 }
 
-button[role="tab"][aria-selected="true"] {
+.horizontal-tabs-container button[role="tab"][aria-selected="true"] {
     color: #FFFFFF !important;
     background: var(--accent-purple) !important;
     border-color: var(--accent-purple) !important;
