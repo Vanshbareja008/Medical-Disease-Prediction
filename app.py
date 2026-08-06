@@ -86,6 +86,35 @@ kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
+# --- UI VISUAL RESULT CARD GENERATOR ---
+def create_result_card(title, value_text, status_label, bar_percent, is_risk=False):
+    bar_color = "#EF4444" if is_risk else "#10B981"  # Red if risk, Green if healthy
+    badge_bg = "#FEE2E2" if is_risk else "#E0F2FE"
+    badge_color = "#991B1B" if is_risk else "#0369A1"
+
+    return f"""
+    <div style="background: #FAFAFA; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px; margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 700; color: #111827; font-size: 1rem;">🧪 {title}</span>
+            <span style="background: {badge_bg}; color: {badge_color}; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem;">
+                {status_label}
+            </span>
+        </div>
+        <div style="font-size: 1.3rem; font-weight: 800; color: #111827; margin-bottom: 12px;">
+            {value_text}
+        </div>
+        <!-- VISUAL STATUS BAR -->
+        <div style="width: 100%; background: #E5E7EB; height: 8px; border-radius: 4px; overflow: hidden;">
+            <div style="width: {bar_percent}%; background: {bar_color}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6B7280; margin-top: 6px;">
+            <span>Optimal</span>
+            <span>Borderline</span>
+            <span>High Risk</span>
+        </div>
+    </div>
+    """
+
 # --- PREDICTION FUNCTIONS ---
 def predict_heart(age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
     data = np.array([[float(age), float(sex), float(cp), float(trestbps), float(chol),
@@ -93,8 +122,8 @@ def predict_heart(age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, ol
                       float(oldpeak), float(slope), float(ca), float(thal)]])
     res = heart_model.predict(data)[0]
     if res == 1:
-        return "⚠️ High Risk Detected", "❤️ Heart Disease Risk Identified", "#FEE2E2", "#991B1B"
-    return "✅ Optimal", "💚 Normal Heart Function", "#DCFCE7", "#166534"
+        return create_result_card("Heart Assessment", "Heart Disease Risk Detected", "High Risk", 85, is_risk=True)
+    return create_result_card("Heart Assessment", "Normal Cardiac Profile", "Optimal Range", 15, is_risk=False)
 
 def predict_diabetes(gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
     gender_map = {"Female": 0, "Male": 1, "Other": 2}
@@ -102,20 +131,26 @@ def predict_diabetes(gender, age, hypertension, heart_disease, smoking, bmi, hba
     data = np.array([[gender_map[gender], float(age), float(hypertension), float(heart_disease),
                       smoke_map[smoking], float(bmi), float(hba1c), float(glucose)]])
     res = diabetes_model.predict(data)[0]
-    return "🩸 Elevated Glucose Marker" if res == 1 else "✅ Normal Glucose Levels"
+    if res == 1:
+        return create_result_card("Diabetes Assessment", "Elevated Glucose Indicators", "High Risk", 90, is_risk=True)
+    return create_result_card("Diabetes Assessment", "Normal Glycemic Profile", "In-Range", 20, is_risk=False)
 
 def predict_kidney(age, gender, bp, creatinine, urea, hb, rbc, hypertension, egfr, albumin):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(bp), float(creatinine),
                       float(urea), float(hb), float(rbc), 1 if hypertension == "Yes" else 0,
                       float(egfr), 1 if albumin == "Yes" else 0]])
     res = kidney_model.predict(data)[0]
-    return "🫘 Kidney Disease Detected" if res == 1 else "✅ Healthy Kidney Function"
+    if res == 1:
+        return create_result_card("Kidney Panel", "Kidney Function Disease Marker", "Low Range Alert", 80, is_risk=True)
+    return create_result_card("Kidney Panel", "Healthy Renal Indicators", "Optimal", 10, is_risk=False)
 
 def predict_liver(age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(tb), float(db),
                       float(alk), float(sgpt), float(sgot), float(proteins), float(albumin), float(ratio)]])
     res = liver_model.predict(data)[0]
-    return "🫀 Liver Biomarker Alert" if res == 1 else "✅ Healthy Liver Profile"
+    if res == 1:
+        return create_result_card("Liver Function", "Hepatic Risk Indicator", "Elevated", 75, is_risk=True)
+    return create_result_card("Liver Function", "Healthy Liver Function", "In-Range", 15, is_risk=False)
 
 def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, smoke, ch2o, scc, faf, tue, calc, mtrans):
     gender_map, yesno = {"Female": 0, "Male": 1}, {"No": 0, "Yes": 1}
@@ -126,7 +161,11 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
     data = np.array([[gender_map[gender], float(age), float(height), float(weight), yesno[family], yesno[favc],
                       float(fcvc), float(ncp), caec_map[caec], yesno[smoke], float(ch2o), yesno[scc],
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
-    return f"⚖️ Result: {label_map[int(obesity_model.predict(data)[0])]}"
+    val = int(obesity_model.predict(data)[0])
+    lbl = label_map[val]
+    is_risk = val > 1
+    pct = min(100, max(15, val * 16))
+    return create_result_card("Body Mass Index", f"Category: {lbl}", "Analysis Complete", pct, is_risk=is_risk)
 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
@@ -142,9 +181,8 @@ def handle_admin_login(passcode):
 def handle_logout():
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", ""
 
-# --- MODERN LIGHT-PURPLE DASHBOARD CSS ---
+# --- STYLING ---
 css = """
-/* Theme Variables inspired by reference design */
 :root {
     --bg-main: #F3F1F8;
     --card-bg: #FFFFFF;
@@ -160,25 +198,10 @@ body, .gradio-container {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
-/* Container & Header Styling */
-.app-header {
-    text-align: center;
-    padding: 16px 0 8px 0;
-}
-.app-header h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 0;
-}
-.app-header p {
-    font-size: 0.95rem;
-    color: var(--accent-purple);
-    font-weight: 600;
-    margin-top: 4px;
-}
+.app-header { text-align: center; padding: 16px 0 8px 0; }
+.app-header h1 { font-size: 2rem; font-weight: 800; color: var(--text-primary); margin: 0; }
+.app-header p { font-size: 0.95rem; color: var(--accent-purple); font-weight: 600; margin-top: 4px; }
 
-/* Card Container Styling */
 .auth-card, .scrollable-card-container {
     background: var(--card-bg) !important;
     border-radius: 24px !important;
@@ -187,27 +210,17 @@ body, .gradio-container {
     border: 1px solid rgba(229, 231, 235, 0.8) !important;
 }
 
-.auth-card {
-    max-width: 440px;
-    margin: 20px auto !important;
-}
+.auth-card { max-width: 440px; margin: 20px auto !important; }
 
-/* Interactive Scrollable Area */
 .scroll-panel {
     max-height: 520px;
     overflow-y: auto !important;
     padding-right: 8px;
 }
 
-.scroll-panel::-webkit-scrollbar {
-    width: 6px;
-}
-.scroll-panel::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
-    border-radius: 10px;
-}
+.scroll-panel::-webkit-scrollbar { width: 6px; }
+.scroll-panel::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
 
-/* Tabs Navigation Styling */
 button[role="tab"] {
     color: var(--text-secondary) !important;
     font-weight: 700 !important;
@@ -223,13 +236,7 @@ button[role="tab"][aria-selected="true"] {
     background: var(--accent-purple-light) !important;
 }
 
-/* Form Controls & Inputs */
-label span {
-    color: var(--text-primary) !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-}
-
+label span { color: var(--text-primary) !important; font-weight: 600 !important; font-size: 0.85rem !important; }
 input, select, textarea {
     background-color: #F9FAFB !important;
     color: var(--text-primary) !important;
@@ -239,12 +246,6 @@ input, select, textarea {
     font-weight: 500 !important;
 }
 
-input:focus, select:focus {
-    border-color: var(--accent-purple) !important;
-    box-shadow: 0 0 0 3px rgba(110, 58, 255, 0.15) !important;
-}
-
-/* Custom Primary Action Buttons */
 button.primary-btn {
     background: var(--accent-purple) !important;
     color: #FFFFFF !important;
@@ -256,10 +257,6 @@ button.primary-btn {
     box-shadow: 0 4px 14px rgba(110, 58, 255, 0.3) !important;
     cursor: pointer;
     margin-top: 12px;
-}
-
-button.primary-btn:hover {
-    background: #5B2FE0 !important;
 }
 
 button.logout-btn {
@@ -276,7 +273,7 @@ footer { visibility: hidden !important; }
 header_html = """
 <div class="app-header">
     <h1>Sick Sense</h1>
-    <p>AI Lab & Diagnostic Dashboard</p>
+    <p>AI Diagnostic Dashboard</p>
 </div>
 """
 
@@ -333,12 +330,8 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
                         thal = gr.Dropdown(["0", "1", "2", "3"], value="2", label="Thal")
 
                     heart_btn = gr.Button("Run Heart Analysis", elem_classes=["primary-btn"])
-                    heart_output = gr.Textbox(label="Lab Result Output", interactive=False)
-                    heart_btn.click(
-                        fn=lambda *args: predict_heart(*args)[0],
-                        inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal],
-                        outputs=heart_output
-                    )
+                    heart_output = gr.HTML()
+                    heart_btn.click(predict_heart, inputs=[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=heart_output)
 
             # Diabetes Tab
             with gr.Tab("🩸 Diabetes"):
@@ -356,7 +349,7 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
                         glucose = gr.Number(label="Blood Glucose", value=110)
 
                     diabetes_btn = gr.Button("Analyze Diabetes Metrics", elem_classes=["primary-btn"])
-                    diabetes_output = gr.Textbox(label="Lab Result Output", interactive=False)
+                    diabetes_output = gr.HTML()
                     diabetes_btn.click(predict_diabetes, inputs=[gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=diabetes_output)
 
             # Kidney Tab
@@ -377,7 +370,7 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
                         k_albumin = gr.Dropdown(["No", "Yes"], value="No", label="Albumin")
 
                     kidney_btn = gr.Button("Analyze Kidney Function", elem_classes=["primary-btn"])
-                    kidney_output = gr.Textbox(label="Lab Result Output", interactive=False)
+                    kidney_output = gr.HTML()
                     kidney_btn.click(predict_kidney, inputs=[k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=kidney_output)
 
             # Liver Tab
@@ -398,7 +391,7 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
                         l_ratio = gr.Number(label="A/G Ratio", value=0.9)
 
                     liver_btn = gr.Button("Analyze Liver Biomarkers", elem_classes=["primary-btn"])
-                    liver_output = gr.Textbox(label="Lab Result Output", interactive=False)
+                    liver_output = gr.HTML()
                     liver_btn.click(predict_liver, inputs=[l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=liver_output)
 
             # Obesity Tab
@@ -426,7 +419,7 @@ with gr.Blocks(css=css, title="Sick Sense Dashboard") as demo:
                         o_mtrans = gr.Dropdown(["Public Transportation", "Walking", "Automobile", "Motorbike", "Bike"], value="Public Transportation", label="Transportation")
 
                     obesity_btn = gr.Button("Analyze Mass Category", elem_classes=["primary-btn"])
-                    obesity_output = gr.Textbox(label="Lab Result Output", interactive=False)
+                    obesity_output = gr.HTML()
                     obesity_btn.click(predict_obesity, inputs=[o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=obesity_output)
 
     # ------------------ ADMIN PANEL PAGE ------------------
