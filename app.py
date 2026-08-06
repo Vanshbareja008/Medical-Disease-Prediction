@@ -46,7 +46,7 @@ def predict_obesity(gender, age, height, weight, family, favc, fcvc, ncp, caec, 
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
     return label_map[int(obesity_model.predict(data)[0])]
 
-# High-Contrast "Sick Sense" Custom CSS
+# High-Contrast Custom CSS
 css = """
 :root {
     --bg-dark: #0A3925;
@@ -58,7 +58,6 @@ css = """
     --btn-dark: #052316;
 }
 
-/* Base Body */
 body, .gradio-container {
     background-color: var(--bg-dark) !important;
     font-family: system-ui, -apple-system, sans-serif !important;
@@ -83,27 +82,37 @@ body, .gradio-container {
     margin-top: 8px;
 }
 
-/* Tabs Navigation */
+/* Fixed High-Contrast Tabs Navigation */
+button[role="tab"] {
+    color: #A3E6CD !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    background: transparent !important;
+    border: none !important;
+    opacity: 0.85 !important;
+}
+
+button[role="tab"]:hover {
+    color: #FFFFFF !important;
+    opacity: 1 !important;
+}
+
+button[role="tab"][aria-selected="true"] {
+    color: #FFFFFF !important;
+    opacity: 1 !important;
+    border-bottom: 4px solid #A3E6CD !important;
+}
+
 .tabs {
     background: transparent !important;
     border: none !important;
 }
+
 .tab-nav {
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
-}
-.tab-nav button {
-    color: var(--accent-mint) !important;
-    font-weight: 700 !important;
-    font-size: 1.05rem !important;
-    border: none !important;
-    background: transparent !important;
-}
-.tab-nav button.selected {
-    color: #FFFFFF !important;
-    border-bottom: 4px solid var(--accent-mint) !important;
+    border-bottom: 2px solid rgba(163, 230, 205, 0.3) !important;
 }
 
-/* Cards & Inputs - High Contrast Fixes */
+/* Form Container & Input High Contrast */
 .block, .form {
     background: var(--card-bg) !important;
     border-radius: 16px !important;
@@ -111,14 +120,12 @@ body, .gradio-container {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Force dark readable text on all labels */
 label span, .block label span, span.text-gray-500 {
     color: var(--text-muted) !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
 }
 
-/* Inputs, Select Boxes, and Numbers */
 input, select, textarea, .wrapper {
     background-color: var(--input-bg) !important;
     color: var(--text-main) !important;
@@ -150,7 +157,7 @@ button.primary-btn:hover {
     color: var(--accent-mint) !important;
 }
 
-/* Result Text Box */
+/* Result Textbox */
 .output-box textarea {
     background-color: #DCFCE7 !important;
     color: #065F46 !important;
