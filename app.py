@@ -184,6 +184,10 @@ def get_welcome_banner(username):
             <div style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
         </div>
     </div>
+    <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 8px 12px; margin-top: 10px; display: flex; align-items: center; gap: 8px; color: #92400E; font-size: 0.8rem; font-weight: 600;">
+        <span>💻</span>
+        <span><strong>Optimal Viewing Note:</strong> For the best visual experience and layout alignment, please use a <strong>laptop / PC</strong> or <strong>turn off Dark Mode</strong> on your device.</span>
+    </div>
     """
 
 # --- ADMIN DATABASE FUNCTIONS ---
@@ -589,7 +593,7 @@ button[role="tab"][aria-selected="true"] {
     text-align: right;
 }
 
-/* Base Desktop Grid (Preserves Desktop PC Layout Unchanged) */
+/* Base Desktop Grid */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -663,11 +667,7 @@ button.logout-btn {
     width: 100% !important;
 }
 
-/* ================================================================== */
-/* TARGETED MOBILE STYLES ONLY (Does NOT impact PC layout) */
-/* ================================================================== */
 @media (max-width: 768px) {
-    /* Login Page Mobile Optimization */
     .responsive-auth-container {
         flex-direction: column !important;
         gap: 12px !important;
@@ -683,13 +683,11 @@ button.logout-btn {
         border-radius: 16px !important;
     }
 
-    /* Mobile Text & Input Enhancements */
     input, textarea, select {
-        font-size: 16px !important; /* Prevents auto-zoom on iOS */
+        font-size: 16px !important;
         padding: 10px !important;
     }
 
-    /* Mobile Dashboard Banner Optimization */
     .welcome-banner {
         flex-direction: column !important;
         align-items: flex-start !important;
@@ -712,7 +710,6 @@ button.logout-btn {
         margin-top: 4px !important;
     }
 
-    /* Dashboard Metrics 2-Column Mobile Grid */
     .metrics-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
@@ -730,7 +727,6 @@ button.logout-btn {
         grid-column: span 2 !important;
     }
 
-    /* Tab Scrolling on Mobile */
     .horizontal-tabs-container button[role="tab"] {
         font-size: 0.75rem !important;
         padding: 6px 10px !important;
@@ -757,6 +753,14 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                     <span style="color: #4C1D95; font-size: 0.8rem; font-weight: 600;">5 ML Diagnostic Models Active</span>
                 </div>
                 """)
+
+        # Recommendation Banner on Login View
+        gr.HTML("""
+        <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 12px; padding: 10px 14px; margin-top: 10px; color: #92400E; font-size: 0.83rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">💡</span>
+            <span><strong>System Display Note:</strong> For the best visual experience and proper text clarity, please use a <strong>laptop / PC</strong> or <strong>turn off Dark Mode</strong> on your device.</span>
+        </div>
+        """)
 
         gr.Markdown("---")
 
@@ -854,7 +858,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         heart_btn = gr.Button("⚡ Run Cardiac Risk Evaluation", elem_classes=["primary-btn"])
                         heart_output = gr.HTML()
-                        heart_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
+                        heart_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🩸 Diabetes Diagnostic"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -873,7 +877,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         diabetes_btn = gr.Button("⚡ Analyze Glycemic Profile", elem_classes=["primary-btn"])
                         diabetes_output = gr.HTML()
-                        diabetes_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
+                        diabetes_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🫘 Kidney Function"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -894,7 +898,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         kidney_btn = gr.Button("⚡ Run Renal Function Assessment", elem_classes=["primary-btn"])
                         kidney_output = gr.HTML()
-                        kidney_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
+                        kidney_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🫀 Liver Function"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -915,7 +919,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         liver_btn = gr.Button("⚡ Analyze Hepatic Panel", elem_classes=["primary-btn"])
                         liver_output = gr.HTML()
-                        liver_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
+                        liver_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("⚖️ Mass & Lifestyle"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -943,7 +947,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         obesity_btn = gr.Button("⚡ Analyze Body Mass Profile", elem_classes=["primary-btn"])
                         obesity_output = gr.HTML()
-                        obesity_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
+                        obesity_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("📜 Medical History Log"):
                     with gr.Column(elem_classes=["scroll-panel"]):
