@@ -50,6 +50,14 @@ init_db()
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+def user_exists(username):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE username = ?", (username.strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    return True if row else False
+
 def register_user(username, password, confirm_password):
     username = username.strip()
     if not username or not password:
@@ -458,13 +466,25 @@ def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, n
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
     username = username.strip()
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
+    
+    if not username or not password:
+        err_msg = "⚠️ <span style='color: #DC2626; font-weight: 700;'>Please enter both username and password.</span>"
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), err_msg, "", empty_df, "", ""
+
     if verify_user(username, password):
         user_hist = get_user_history_df(username)
         welcome_html = get_welcome_banner(username)
         metrics_html = get_dashboard_html(username)
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "", username, user_hist, welcome_html, metrics_html
-    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid credentials. Please try again.</span>", "", empty_df, "", ""
+    
+    # Check if account exists to give a specific warning
+    if not user_exists(username):
+        err_msg = "⚠️ <span style='color: #DC2626; font-weight: 700;'>Account not found. Please <strong>Create an Account</strong> first before signing in.</span>"
+    else:
+        err_msg = "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid username or password. Please check your credentials.</span>"
+        
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), err_msg, "", empty_df, "", ""
 
 def handle_admin_login(passcode):
     empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
