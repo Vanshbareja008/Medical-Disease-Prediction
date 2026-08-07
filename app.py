@@ -81,7 +81,6 @@ def verify_user(username, password):
 # --- SAVE & RETRIEVE USER DIAGNOSTIC RECORDS ---
 def save_user_record(username, test_type, result_summary, confidence_score):
     if not username:
-        print("DEBUG: [save_user_record] Skipped save because username is empty.")
         return
     try:
         conn = get_db_connection()
@@ -94,7 +93,7 @@ def save_user_record(username, test_type, result_summary, confidence_score):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"DEBUG: [save_user_record] Database Write Error: {e}")
+        print(f"Database Write Error: {e}")
 
 def get_user_history_df(username):
     if not username:
@@ -117,7 +116,6 @@ def get_user_history_df(username):
             
         return pd.DataFrame(formatted_rows, columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     except Exception as e:
-        print(f"DEBUG: [get_user_history_df] Database Read Error: {e}")
         return pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
 
 def get_dashboard_counts(username):
@@ -305,7 +303,7 @@ def create_interactive_result_card(title, value_text, status_label, bar_percent,
         </div>
 
         <div style="font-size: 1.2rem; font-weight: 900; color: #18181B; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span style="color: #71717A; font-size: 0.88rem; font-weight: 600;">Outcome:</span> {value_text}
+            <span style="color: #52525B; font-size: 0.88rem; font-weight: 600;">Outcome:</span> {value_text}
         </div>
 
         <div style="margin-bottom: 14px;">
@@ -474,27 +472,59 @@ def handle_logout():
     empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", empty_df, "", ""
 
-# --- RESPONSIVE CSS (MOBILE + DESKTOP) ---
+# --- COMPREHENSIVE CSS (FIXES TEXT VISIBILITY & MOBILE COLUMNS) ---
 css = """
 :root {
-    --bg-main: #EBE8F9;
-    --card-bg: #FFFFFF;
-    --accent-purple: #7C3AED;
-    --text-primary: #18181B;
-    --border-color: #E4E4E7;
+    --bg-main: #EBE8F9 !important;
+    --card-bg: #FFFFFF !important;
+    --accent-purple: #7C3AED !important;
+    --text-primary: #18181B !important;
+    --border-color: #E4E4E7 !important;
+
+    /* Override Gradio Dark Theme Variable Defaults to Force High Contrast */
+    --body-text-color: #18181B !important;
+    --block-label-text-color: #3F3F46 !important;
+    --input-text-color: #18181B !important;
+    --table-text-color: #18181B !important;
 }
 
 body, .gradio-container {
     background-color: var(--bg-main) !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    color: var(--text-primary) !important;
+    color: #18181B !important;
     padding: 8px !important;
+}
+
+/* Force standard dark text color across all Markdown elements */
+.gradio-container p, 
+.gradio-container span, 
+.gradio-container h1, 
+.gradio-container h2, 
+.gradio-container h3, 
+.gradio-container h4, 
+.gradio-container label, 
+.gradio-container .prose {
+    color: #18181B !important;
+}
+
+/* Text Input & Dropdown Styling to guarantee readability */
+input, textarea, select, .gr-input, .gr-select {
+    color: #18181B !important;
+    background-color: #FFFFFF !important;
+    border: 1px solid #D4D4D8 !important;
+    border-radius: 8px !important;
+}
+
+label span {
+    color: #3F3F46 !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
 }
 
 .lavender-card {
     background: var(--card-bg) !important;
     border-radius: 20px !important;
-    padding: 16px !important;
+    padding: 20px !important;
     border: 1px solid #E2E0F0 !important;
     box-shadow: 0 8px 24px rgba(124, 58, 237, 0.05) !important;
 }
@@ -522,14 +552,14 @@ body, .gradio-container {
 }
 
 .metric-title {
-    color: #71717A;
+    color: #71717A !important;
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
 .metric-val {
-    color: #18181B;
+    color: #18181B !important;
     font-size: 1.3rem;
     font-weight: 900;
     margin-top: 2px;
@@ -574,22 +604,36 @@ button.logout-btn {
     width: 100% !important;
 }
 
-/* MOBILE-FIRST OPTIMIZATIONS */
+/* MOBILE RESPONSIVE OVERRIDES */
 @media (max-width: 768px) {
+    /* Stack horizontal login columns vertically on phones */
+    .responsive-auth-container {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .responsive-auth-container > div {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
     .metrics-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
     }
+    
     .metric-card:last-child {
         grid-column: span 2;
     }
+
     .horizontal-tabs-container button[role="tab"] {
         font-size: 0.75rem !important;
         padding: 6px 10px !important;
         margin-bottom: 4px !important;
     }
+
     .lavender-card {
-        padding: 10px !important;
+        padding: 12px !important;
         border-radius: 14px !important;
     }
 }
@@ -600,7 +644,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
     # ------------------ AUTHENTICATION PORTAL ------------------
     with gr.Column(visible=True, elem_classes=["lavender-card"]) as auth_view:
-        with gr.Row():
+        with gr.Row(elem_classes=["responsive-auth-container"]):
             with gr.Column(scale=1):
                 gr.Markdown("""
                 # 🏥 **Sick Sense Clinical AI**
@@ -616,7 +660,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
         gr.Markdown("---")
 
-        with gr.Row():
+        with gr.Row(elem_classes=["responsive-auth-container"]):
             with gr.Column(scale=1.2):
                 with gr.Tabs():
                     with gr.Tab("🔑 Sign In"):
