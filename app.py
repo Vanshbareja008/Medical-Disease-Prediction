@@ -144,27 +144,27 @@ def get_dashboard_html(username):
     return f"""
     <div class="metrics-grid">
         <div class="metric-card">
-            <div style="font-size: 1.2rem;">📊</div>
+            <div class="metric-icon">📊</div>
             <div class="metric-title">Total Tests</div>
             <div class="metric-val">{t}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.2rem;">❤️</div>
+            <div class="metric-icon">❤️</div>
             <div class="metric-title">Heart</div>
             <div class="metric-val">{h}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.2rem;">🩸</div>
+            <div class="metric-icon">🩸</div>
             <div class="metric-title">Diabetes</div>
             <div class="metric-val">{d}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.2rem;">🫘</div>
+            <div class="metric-icon">🫘</div>
             <div class="metric-title">Kidney</div>
             <div class="metric-val">{k}</div>
         </div>
-        <div class="metric-card">
-            <div style="font-size: 1.2rem;">🫀</div>
+        <div class="metric-card full-width-mobile">
+            <div class="metric-icon">🫀</div>
             <div class="metric-title">Liver</div>
             <div class="metric-val">{l}</div>
         </div>
@@ -173,13 +173,13 @@ def get_dashboard_html(username):
 
 def get_welcome_banner(username):
     return f"""
-    <div style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); border-radius: 18px; padding: 18px 22px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);">
+    <div class="welcome-banner">
         <div>
-            <div style="background: rgba(255,255,255,0.2); display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; margin-bottom: 6px; color: #FFFFFF;">CLINICAL PORTAL ACTIVE</div>
-            <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #FFFFFF;">Welcome, {username}</h2>
-            <p style="margin: 2px 0 0 0; color: #F3E8FF; font-size: 0.85rem; font-weight: 500;">Automated health diagnostic triage active.</p>
+            <span class="status-tag">CLINICAL PORTAL ACTIVE</span>
+            <h2 class="welcome-title">Welcome, {username}</h2>
+            <p class="welcome-sub">Automated health diagnostic triage active.</p>
         </div>
-        <div style="background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); text-align: right;">
+        <div class="date-badge">
             <div style="font-size: 0.7rem; color: #E9D5FF; font-weight: 700;">SYSTEM DATE</div>
             <div style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
         </div>
@@ -472,7 +472,7 @@ def handle_logout():
     empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", empty_df, "", ""
 
-# --- COMPREHENSIVE CSS (FIXES TEXT VISIBILITY & MOBILE COLUMNS) ---
+# --- CSS FOR HIGH VISIBILITY & MOBILE RESPONSIVENESS ---
 css = """
 :root {
     --bg-main: #EBE8F9 !important;
@@ -481,46 +481,53 @@ css = """
     --text-primary: #18181B !important;
     --border-color: #E4E4E7 !important;
 
-    /* Override Gradio Dark Theme Variable Defaults to Force High Contrast */
+    /* Override Gradio Dark Mode Variables Entirely */
     --body-text-color: #18181B !important;
-    --block-label-text-color: #3F3F46 !important;
+    --block-label-text-color: #27272A !important;
     --input-text-color: #18181B !important;
     --table-text-color: #18181B !important;
+    --background-fill-primary: #FFFFFF !important;
+    --background-fill-secondary: #F4F4F5 !important;
 }
 
 body, .gradio-container {
     background-color: var(--bg-main) !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     color: #18181B !important;
-    padding: 8px !important;
 }
 
-/* Force standard dark text color across all Markdown elements */
+/* Force high-contrast text color on inputs, markdown, and labels */
 .gradio-container p, 
 .gradio-container span, 
+.gradio-container label, 
+.gradio-container .prose,
 .gradio-container h1, 
 .gradio-container h2, 
-.gradio-container h3, 
-.gradio-container h4, 
-.gradio-container label, 
-.gradio-container .prose {
+.gradio-container h3 {
     color: #18181B !important;
 }
 
-/* Text Input & Dropdown Styling to guarantee readability */
+/* Strict Input Styling for Universal Visibility */
 input, textarea, select, .gr-input, .gr-select {
-    color: #18181B !important;
+    color: #000000 !important;
     background-color: #FFFFFF !important;
-    border: 1px solid #D4D4D8 !important;
+    border: 1.5px solid #A1A1AA !important;
     border-radius: 8px !important;
+    font-weight: 600 !important;
 }
 
-label span {
+/* Tab Headers Contrast Fix */
+button[role="tab"] {
     color: #3F3F46 !important;
     font-weight: 700 !important;
-    font-size: 0.82rem !important;
 }
 
+button[role="tab"][aria-selected="true"] {
+    color: #FFFFFF !important;
+    background-color: #7C3AED !important;
+}
+
+/* Component Containers */
 .lavender-card {
     background: var(--card-bg) !important;
     border-radius: 20px !important;
@@ -535,6 +542,54 @@ label span {
     padding-right: 4px;
 }
 
+/* Dashboard Banner Base Styling */
+.welcome-banner {
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    border-radius: 18px;
+    padding: 18px 22px;
+    color: #FFFFFF;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);
+}
+
+.status-tag {
+    background: rgba(255,255,255,0.2);
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+    color: #FFFFFF;
+}
+
+.welcome-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #FFFFFF !important;
+}
+
+.welcome-sub {
+    margin: 2px 0 0 0;
+    color: #F3E8FF !important;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.date-badge {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.3);
+    text-align: right;
+}
+
+/* Base Desktop Grid (Preserves Desktop PC Layout Unchanged) */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -551,8 +606,12 @@ label span {
     box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
+.metric-icon {
+    font-size: 1.2rem;
+}
+
 .metric-title {
-    color: #71717A !important;
+    color: #52525B !important;
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -604,12 +663,14 @@ button.logout-btn {
     width: 100% !important;
 }
 
-/* MOBILE RESPONSIVE OVERRIDES */
+/* ================================================================== */
+/* TARGETED MOBILE STYLES ONLY (Does NOT impact PC layout) */
+/* ================================================================== */
 @media (max-width: 768px) {
-    /* Stack horizontal login columns vertically on phones */
+    /* Login Page Mobile Optimization */
     .responsive-auth-container {
         flex-direction: column !important;
-        gap: 16px !important;
+        gap: 12px !important;
     }
 
     .responsive-auth-container > div {
@@ -617,24 +678,63 @@ button.logout-btn {
         min-width: 100% !important;
     }
 
+    .lavender-card {
+        padding: 14px !important;
+        border-radius: 16px !important;
+    }
+
+    /* Mobile Text & Input Enhancements */
+    input, textarea, select {
+        font-size: 16px !important; /* Prevents auto-zoom on iOS */
+        padding: 10px !important;
+    }
+
+    /* Mobile Dashboard Banner Optimization */
+    .welcome-banner {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .welcome-title {
+        font-size: 1.15rem !important;
+    }
+
+    .welcome-sub {
+        font-size: 0.78rem !important;
+    }
+
+    .date-badge {
+        width: 100% !important;
+        text-align: left !important;
+        padding: 6px 12px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Dashboard Metrics 2-Column Mobile Grid */
     .metrics-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
     }
-    
-    .metric-card:last-child {
-        grid-column: span 2;
+
+    .metric-card {
+        padding: 10px 6px !important;
     }
 
+    .metric-val {
+        font-size: 1.1rem !important;
+    }
+
+    .full-width-mobile {
+        grid-column: span 2 !important;
+    }
+
+    /* Tab Scrolling on Mobile */
     .horizontal-tabs-container button[role="tab"] {
         font-size: 0.75rem !important;
         padding: 6px 10px !important;
         margin-bottom: 4px !important;
-    }
-
-    .lavender-card {
-        padding: 12px !important;
-        border-radius: 14px !important;
     }
 }
 """
