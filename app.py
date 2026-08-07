@@ -5,6 +5,7 @@ from datetime import datetime
 import gradio as gr
 import joblib
 import numpy as np
+import pandas as pd
 
 # --- CONFIGURATION ---
 DB_FILE = "users.db"
@@ -80,15 +81,15 @@ def save_user_record(username, test_type, result_summary):
     conn.commit()
     conn.close()
 
-def get_user_history(username):
+def get_user_history_df(username):
     if not username:
-        return []
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT test_type, result_summary, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", (username,))
     rows = cursor.fetchall()
     conn.close()
-    return rows
+    return pd.DataFrame(rows, columns=["Test Module", "Outcome Result", "Date & Time"])
 
 def get_dashboard_counts(username):
     if not username:
@@ -156,13 +157,13 @@ def get_welcome_banner(username):
     """
 
 # --- ADMIN DATABASE FUNCTIONS ---
-def get_all_users():
+def get_all_users_df():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT id, username FROM users")
     rows = cursor.fetchall()
     conn.close()
-    return rows
+    return pd.DataFrame(rows, columns=["User ID", "Registered Username"])
 
 def delete_user_by_username(username_to_delete):
     username_to_delete = username_to_delete.strip()
@@ -256,7 +257,7 @@ def predict_heart(username, age, sex, cp, trestbps, chol, fbs, restecg, thalach,
     rec = "Cardiologist consultation advised. Schedule ECG and lipid panel." if res == 1 else "Maintain regular aerobic exercises and annual checks."
     
     card = create_interactive_result_card("Heart Assessment", result_text, "High Risk" if res == 1 else "In-Range", 88 if res == 1 else 12, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history(username), get_dashboard_html(username)
+    return card, get_user_history_df(username), get_dashboard_html(username)
 
 def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
     gender_map = {"Female": 0, "Male": 1, "Other": 2}
@@ -272,7 +273,7 @@ def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking
     rec = "Consult an endocrinologist for OGTT and dietary planning." if res == 1 else "Maintain low-glycemic diet and active routine."
     
     card = create_interactive_result_card("Diabetes Assessment", result_text, "Action Required" if res == 1 else "In-Range", 92 if res == 1 else 15, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history(username), get_dashboard_html(username)
+    return card, get_user_history_df(username), get_dashboard_html(username)
 
 def predict_kidney(username, age, gender, bp, creatinine, urea, hb, rbc, hypertension, egfr, albumin):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(bp), float(creatinine),
@@ -287,7 +288,7 @@ def predict_kidney(username, age, gender, bp, creatinine, urea, hb, rbc, hyperte
     rec = "Nephrology evaluation recommended. Schedule urinalysis." if res == 1 else "Ensure adequate daily hydration (2-3L water)."
     
     card = create_interactive_result_card("Kidney Panel", result_text, "High Risk" if res == 1 else "In-Range", 84 if res == 1 else 10, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history(username), get_dashboard_html(username)
+    return card, get_user_history_df(username), get_dashboard_html(username)
 
 def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(tb), float(db),
@@ -301,7 +302,7 @@ def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albu
     rec = "Schedule an abdominal ultrasound and review enzymes with a doctor." if res == 1 else "Maintain healthy lifestyle habits."
     
     card = create_interactive_result_card("Liver Function", result_text, "Elevated Risk" if res == 1 else "In-Range", 78 if res == 1 else 14, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history(username), get_dashboard_html(username)
+    return card, get_user_history_df(username), get_dashboard_html(username)
 
 def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, ncp, caec, smoke, ch2o, scc, faf, tue, calc, mtrans):
     gender_map, yesno = {"Female": 0, "Male": 1}, {"No": 0, "Yes": 1}
@@ -324,24 +325,27 @@ def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, n
     rec = "Consult with a registered dietitian for personalized meal planning." if is_risk else "Maintain active lifestyle and current caloric balance."
     
     card = create_interactive_result_card("Body Mass Index", lbl, "Attention" if is_risk else "In-Range", pct, rec, biomarkers, risk_level, is_risk=is_risk)
-    return card, get_user_history(username), get_dashboard_html(username)
+    return card, get_user_history_df(username), get_dashboard_html(username)
 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
     if verify_user(username, password):
-        user_hist = get_user_history(username)
+        user_hist = get_user_history_df(username)
         welcome_html = get_welcome_banner(username)
         metrics_html = get_dashboard_html(username)
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "", username, user_hist, welcome_html, metrics_html
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid credentials. Please try again.</span>", "", [], "", ""
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid credentials. Please try again.</span>", "", empty_df, "", ""
 
 def handle_admin_login(passcode):
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
     if passcode == ADMIN_SECRET_KEY:
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", "", [], "", "", get_all_users()
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Incorrect Admin Key.</span>", "", [], "", "", []
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", "", empty_df, "", "", get_all_users_df()
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Incorrect Admin Key.</span>", "", empty_df, "", "", pd.DataFrame()
 
 def handle_logout():
-    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", [], "", ""
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+    return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", empty_df, "", ""
 
 # --- CROSS-PLATFORM MOBILE & LAPTOP RESPONSIVE CSS ---
 css = """
@@ -707,7 +711,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                 with gr.Tab("📜 Medical History Log"):
                     with gr.Column(elem_classes=["scroll-panel"]):
                         gr.Markdown("#### Patient Log History")
-                        history_table = gr.Dataframe(headers=["Test Module", "Outcome Result", "Date & Time"], value=[], interactive=False)
+                        history_table = gr.Dataframe(value=pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"]), interactive=False)
                         refresh_history_btn = gr.Button("🔄 Refresh Saved Records", elem_classes=["primary-btn"])
 
     # ------------------ ADMIN PANEL PAGE ------------------
@@ -717,7 +721,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             admin_logout_btn = gr.Button("Exit Panel", elem_classes=["logout-btn"], scale=0, min_width=100)
 
         with gr.Column(elem_classes=["scroll-panel"]):
-            user_table = gr.Dataframe(headers=["User ID", "Registered Username"], value=[], interactive=False)
+            user_table = gr.Dataframe(value=pd.DataFrame(columns=["User ID", "Registered Username"]), interactive=False)
             refresh_btn = gr.Button("🔄 Refresh Database Table", elem_classes=["primary-btn"])
 
             gr.Markdown("---")
@@ -735,11 +739,11 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
     user_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, username_input, password_input, history_table, current_user_state])
     admin_logout_btn.click(handle_logout, inputs=[], outputs=[auth_view, user_dashboard_view, admin_dashboard_view, admin_key_input, admin_msg, history_table, current_user_state])
     
-    refresh_history_btn.click(get_user_history, inputs=[current_user_state], outputs=[history_table])
-    refresh_btn.click(get_all_users, inputs=[], outputs=[user_table])
-    delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users, inputs=[], outputs=[user_table])
+    refresh_history_btn.click(get_user_history_df, inputs=[current_user_state], outputs=[history_table])
+    refresh_btn.click(get_all_users_df, inputs=[], outputs=[user_table])
+    delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users_df, inputs=[], outputs=[user_table])
 
-    # Dynamic Model Predictions with Live Dashboard Updates
+    # Dynamic Model Predictions with Live Dashboard & Table Updates
     heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=[heart_output, history_table, metrics_banner])
     diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=[diabetes_output, history_table, metrics_banner])
     kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=[kidney_output, history_table, metrics_banner])
