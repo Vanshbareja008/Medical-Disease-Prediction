@@ -1,4 +1,5 @@
 import os
+import io
 import sqlite3
 import hashlib
 from datetime import datetime
@@ -7,13 +8,18 @@ import joblib
 import numpy as np
 import pandas as pd
 
+# PDF Generation Imports
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
 # --- CONFIGURATION ---
 DB_FILE = "users.db"
 ADMIN_SECRET_KEY = "admin@123"
 
 # --- DATABASE SETUP ---
 def get_db_connection():
-    # Adding timeout=15 prevents 'database is locked' errors on concurrent access on hosting platforms
     return sqlite3.connect(DB_FILE, timeout=15)
 
 def init_db():
@@ -32,6 +38,7 @@ def init_db():
             username TEXT NOT NULL,
             test_type TEXT NOT NULL,
             result_summary TEXT NOT NULL,
+            confidence REAL DEFAULT 0.0,
             timestamp TEXT NOT NULL
         )
     """)
@@ -72,7 +79,7 @@ def verify_user(username, password):
     return True if row and row[0] == hash_password(password) else False
 
 # --- SAVE & RETRIEVE USER DIAGNOSTIC RECORDS ---
-def save_user_record(username, test_type, result_summary):
+def save_user_record(username, test_type, result_summary, confidence_score):
     if not username:
         print("DEBUG: [save_user_record] Skipped save because username is empty.")
         return
@@ -81,36 +88,37 @@ def save_user_record(username, test_type, result_summary):
         cursor = conn.cursor()
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute(
-            "INSERT INTO lab_history (username, test_type, result_summary, timestamp) VALUES (?, ?, ?, ?)",
-            (username, test_type, result_summary, time_str)
+            "INSERT INTO lab_history (username, test_type, result_summary, confidence, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (username, test_type, result_summary, confidence_score, time_str)
         )
         conn.commit()
         conn.close()
-        print(f"DEBUG: [save_user_record] Successfully saved record for '{username}' - {test_type}")
     except Exception as e:
         print(f"DEBUG: [save_user_record] Database Write Error: {e}")
 
 def get_user_history_df(username):
-    print(f"DEBUG: [get_user_history_df] Fetching history for user: '{username}'")
     if not username:
-        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT test_type, result_summary, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", 
+            "SELECT test_type, result_summary, confidence, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", 
             (username,)
         )
         rows = cursor.fetchall()
         conn.close()
         
-        df = pd.DataFrame(rows, columns=["Test Module", "Outcome Result", "Date & Time"])
-        print(f"DEBUG: [get_user_history_df] Fetched {len(df)} records.")
-        return df
+        formatted_rows = []
+        for r in rows:
+            conf_str = f"{r[2]:.1f}%" if r[2] else "N/A"
+            formatted_rows.append([r[0], r[1], conf_str, r[3]])
+            
+        return pd.DataFrame(formatted_rows, columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     except Exception as e:
         print(f"DEBUG: [get_user_history_df] Database Read Error: {e}")
-        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
 
 def get_dashboard_counts(username):
     if not username:
@@ -131,7 +139,6 @@ def get_dashboard_counts(username):
         conn.close()
         return total, heart, diabetes, kidney, liver
     except Exception as e:
-        print(f"DEBUG: [get_dashboard_counts] Error: {e}")
         return 0, 0, 0, 0, 0
 
 def get_dashboard_html(username):
@@ -139,27 +146,27 @@ def get_dashboard_html(username):
     return f"""
     <div class="metrics-grid">
         <div class="metric-card">
-            <div style="font-size: 1.4rem;">📊</div>
+            <div style="font-size: 1.2rem;">📊</div>
             <div class="metric-title">Total Tests</div>
             <div class="metric-val">{t}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.4rem;">❤️</div>
+            <div style="font-size: 1.2rem;">❤️</div>
             <div class="metric-title">Heart</div>
             <div class="metric-val">{h}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.4rem;">🩸</div>
+            <div style="font-size: 1.2rem;">🩸</div>
             <div class="metric-title">Diabetes</div>
             <div class="metric-val">{d}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.4rem;">🫘</div>
+            <div style="font-size: 1.2rem;">🫘</div>
             <div class="metric-title">Kidney</div>
             <div class="metric-val">{k}</div>
         </div>
         <div class="metric-card">
-            <div style="font-size: 1.4rem;">🫀</div>
+            <div style="font-size: 1.2rem;">🫀</div>
             <div class="metric-title">Liver</div>
             <div class="metric-val">{l}</div>
         </div>
@@ -171,12 +178,12 @@ def get_welcome_banner(username):
     <div style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); border-radius: 18px; padding: 18px 22px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);">
         <div>
             <div style="background: rgba(255,255,255,0.2); display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; margin-bottom: 6px; color: #FFFFFF;">CLINICAL PORTAL ACTIVE</div>
-            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #FFFFFF;">Welcome, {username}</h2>
-            <p style="margin: 2px 0 0 0; color: #F3E8FF; font-size: 0.88rem; font-weight: 500;">Automated health diagnostic triage active.</p>
+            <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #FFFFFF;">Welcome, {username}</h2>
+            <p style="margin: 2px 0 0 0; color: #F3E8FF; font-size: 0.85rem; font-weight: 500;">Automated health diagnostic triage active.</p>
         </div>
         <div style="background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); text-align: right;">
             <div style="font-size: 0.7rem; color: #E9D5FF; font-weight: 700;">SYSTEM DATE</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">📅 {datetime.now().strftime('%b %d, %Y')}</div>
         </div>
     </div>
     """
@@ -191,7 +198,6 @@ def get_all_users_df():
         conn.close()
         return pd.DataFrame(rows, columns=["User ID", "Registered Username"])
     except Exception as e:
-        print(f"DEBUG: [get_all_users_df] Error: {e}")
         return pd.DataFrame(columns=["User ID", "Registered Username"])
 
 def delete_user_by_username(username_to_delete):
@@ -221,6 +227,55 @@ kidney_model = joblib.load("kidney diagn.pkl")
 liver_model = joblib.load("Liver Diagn.pkl")
 obesity_model = joblib.load("Obesity Diagn.pkl")
 
+# --- PDF GENERATOR FUNCTION ---
+def generate_medical_pdf(patient_name, test_title, outcome_text, probability_score, biomarkers, recommendations):
+    file_path = f"/tmp/{patient_name}_{test_title.replace(' ', '_')}_Report.pdf" if os.name != 'nt' else f"{patient_name}_{test_title.replace(' ', '_')}_Report.pdf"
+    
+    doc = SimpleDocTemplate(
+        file_path,
+        pagesize=letter,
+        rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
+    )
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=20, textColor=colors.HexColor('#6D28D9'), spaceAfter=10)
+    meta_style = ParagraphStyle('MetaText', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#52525B'), spaceAfter=4)
+    heading_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#18181B'), spaceBefore=12, spaceAfter=6)
+    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#27272A'), leading=14, spaceAfter=8)
+    warning_style = ParagraphStyle('WarningText', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#991B1B'), leading=13)
+
+    elements = []
+
+    # Title & Metadata
+    elements.append(Paragraph(f"Sick Sense Clinical AI — {test_title} Report", title_style))
+    elements.append(Paragraph(f"<b>Patient Name:</b> {patient_name} | <b>Date:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", meta_style))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#7C3AED'), spaceAfter=15))
+
+    # Mandatory Medical Warning Box
+    warning_content = [
+        Paragraph("<b>⚠️ MANDATORY MEDICAL DISCLAIMER:</b>", warning_style),
+        Paragraph("This diagnostic report is generated purely by Machine Learning algorithms for risk stratification support. It DOES NOT constitute a formal medical diagnosis or prescription. You MUST consult a certified medical practitioner/doctor before taking any clinical actions, medication, or lifestyle interventions.", warning_style)
+    ]
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#FCA5A5'), spaceAfter=6))
+    elements.extend(warning_content)
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#FCA5A5'), spaceBefore=6, spaceAfter=15))
+
+    # Test Results & Confidence Metrics
+    elements.append(Paragraph("1. Diagnostic Summary & Model Confidence", heading_style))
+    elements.append(Paragraph(f"<b>Primary Outcome:</b> {outcome_text}", body_style))
+    elements.append(Paragraph(f"<b>Model Probability / Confidence Index:</b> {probability_score:.1f}%", body_style))
+
+    # Biomarkers Evaluation
+    elements.append(Paragraph("2. Evaluated Patient Biomarkers", heading_style))
+    elements.append(Paragraph(f"{biomarkers}", body_style))
+
+    # Recommendations
+    elements.append(Paragraph("3. Clinical Recommendation & Action Plan", heading_style))
+    elements.append(Paragraph(f"{recommendations}", body_style))
+
+    doc.build(elements)
+    return file_path
+
 # --- RESULT CARD GENERATOR ---
 def create_interactive_result_card(title, value_text, status_label, bar_percent, recommendation, key_biomarkers, risk_level_text, is_risk=False):
     badge_bg = "#FEE2E2" if is_risk else "#DCFCE7"
@@ -229,6 +284,16 @@ def create_interactive_result_card(title, value_text, status_label, bar_percent,
 
     return f"""
     <div style="background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 18px; padding: 18px; margin-top: 14px; box-shadow: 0 4px 16px rgba(124, 58, 237, 0.06);">
+        <!-- Mandatory Warning Banner -->
+        <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
+            <div style="color: #991B1B; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; gap: 4px;">
+                ⚠️ IMPORTANT MEDICAL NOTICE
+            </div>
+            <div style="color: #7F1D1D; font-size: 0.75rem; margin-top: 2px; line-height: 1.3;">
+                This assessment is generated by AI models. <strong>You must consult a certified medical professional</strong> before making any health decisions.
+            </div>
+        </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.2rem;">🧪</span>
@@ -239,14 +304,14 @@ def create_interactive_result_card(title, value_text, status_label, bar_percent,
             </span>
         </div>
 
-        <div style="font-size: 1.3rem; font-weight: 900; color: #18181B; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div style="font-size: 1.2rem; font-weight: 900; color: #18181B; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span style="color: #71717A; font-size: 0.88rem; font-weight: 600;">Outcome:</span> {value_text}
         </div>
 
         <div style="margin-bottom: 14px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #52525B; font-weight: 700; margin-bottom: 6px;">
-                <span>Calculated Risk Range</span>
-                <span style="color: {bar_color};">{bar_percent}% Index</span>
+                <span>AI Confidence / Risk Index</span>
+                <span style="color: {bar_color};">{bar_percent:.1f}% Confidence</span>
             </div>
             <div style="width: 100%; background: #F4F4F5; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #E4E4E7;">
                 <div style="width: {bar_percent}%; background: {bar_color}; height: 100%; border-radius: 5px; transition: width 0.6s ease-in-out;"></div>
@@ -280,61 +345,85 @@ def predict_heart(username, age, sex, cp, trestbps, chol, fbs, restecg, thalach,
     data = np.array([[float(age), float(sex), float(cp), float(trestbps), float(chol),
                       float(fbs), float(restecg), float(thalach), float(exang), 
                       float(oldpeak), float(slope), float(ca), float(thal)]])
-    res = heart_model.predict(data)[0]
+    
+    probs = heart_model.predict_proba(data)[0]
+    res = int(np.argmax(probs))
+    conf_score = float(probs[res] * 100)
+    
     result_text = "Heart Disease Risk Detected" if res == 1 else "Normal Cardiac Profile"
-    save_user_record(username, "Heart Disease", result_text)
+    save_user_record(username, "Heart Disease", result_text, conf_score)
     
     biomarkers = f"Age: {age} | BP: {trestbps} mm Hg | Chol: {chol} mg/dl | Max HR: {thalach} bpm"
-    risk_level = "High Probability of Cardiovascular Anomaly" if res == 1 else "Low Risk / Standard Baseline"
+    risk_level = f"High Probability of Cardiovascular Anomaly ({conf_score:.1f}% Confidence)" if res == 1 else f"Low Risk / Standard Baseline ({conf_score:.1f}% Confidence)"
     rec = "Cardiologist consultation advised. Schedule ECG and lipid panel." if res == 1 else "Maintain regular aerobic exercises and annual checks."
     
-    card = create_interactive_result_card("Heart Assessment", result_text, "High Risk" if res == 1 else "In-Range", 88 if res == 1 else 12, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history_df(username), get_dashboard_html(username)
+    card = create_interactive_result_card("Heart Assessment", result_text, "High Risk" if res == 1 else "In-Range", conf_score, rec, biomarkers, risk_level, is_risk=(res == 1))
+    pdf_path = generate_medical_pdf(username or "Patient", "Heart Assessment", result_text, conf_score, biomarkers, rec)
+    
+    return card, gr.update(value=pdf_path, visible=True), get_user_history_df(username), get_dashboard_html(username)
 
 def predict_diabetes(username, gender, age, hypertension, heart_disease, smoking, bmi, hba1c, glucose):
     gender_map = {"Female": 0, "Male": 1, "Other": 2}
     smoke_map = {"Never": 0, "No Info": 1, "Current": 2, "Former": 3, "Ever": 4, "Not Current": 5}
     data = np.array([[gender_map[gender], float(age), float(hypertension), float(heart_disease),
                       smoke_map[smoking], float(bmi), float(hba1c), float(glucose)]])
-    res = diabetes_model.predict(data)[0]
+    
+    probs = diabetes_model.predict_proba(data)[0]
+    res = int(np.argmax(probs))
+    conf_score = float(probs[res] * 100)
+    
     result_text = "Elevated Diabetes Risk" if res == 1 else "Normal Glycemic Baseline"
-    save_user_record(username, "Diabetes Analysis", result_text)
+    save_user_record(username, "Diabetes Analysis", result_text, conf_score)
     
     biomarkers = f"HbA1c: {hba1c}% | Fasting Glucose: {glucose} mg/dL | BMI: {bmi}"
-    risk_level = "Hyperglycemia / Diabetes Type II Risk" if res == 1 else "Normoglycemic Baseline"
+    risk_level = f"Hyperglycemia Risk ({conf_score:.1f}% Confidence)" if res == 1 else f"Normoglycemic Baseline ({conf_score:.1f}% Confidence)"
     rec = "Consult an endocrinologist for OGTT and dietary planning." if res == 1 else "Maintain low-glycemic diet and active routine."
     
-    card = create_interactive_result_card("Diabetes Assessment", result_text, "Action Required" if res == 1 else "In-Range", 92 if res == 1 else 15, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history_df(username), get_dashboard_html(username)
+    card = create_interactive_result_card("Diabetes Assessment", result_text, "Action Required" if res == 1 else "In-Range", conf_score, rec, biomarkers, risk_level, is_risk=(res == 1))
+    pdf_path = generate_medical_pdf(username or "Patient", "Diabetes Assessment", result_text, conf_score, biomarkers, rec)
+    
+    return card, gr.update(value=pdf_path, visible=True), get_user_history_df(username), get_dashboard_html(username)
 
 def predict_kidney(username, age, gender, bp, creatinine, urea, hb, rbc, hypertension, egfr, albumin):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(bp), float(creatinine),
                       float(urea), float(hb), float(rbc), 1 if hypertension == "Yes" else 0,
                       float(egfr), 1 if albumin == "Yes" else 0]])
-    res = kidney_model.predict(data)[0]
+    
+    probs = kidney_model.predict_proba(data)[0]
+    res = int(np.argmax(probs))
+    conf_score = float(probs[res] * 100)
+    
     result_text = "Renal Dysfunction Indicator" if res == 1 else "Healthy Kidney Parameters"
-    save_user_record(username, "Kidney Function", result_text)
+    save_user_record(username, "Kidney Function", result_text, conf_score)
     
     biomarkers = f"eGFR: {egfr} | Creatinine: {creatinine} mg/dL | Urea: {urea} mg/dL"
-    risk_level = "Elevated Risk of Chronic Kidney Impairment" if res == 1 else "Optimal Glomerular Filtration Rate"
+    risk_level = f"Elevated Risk of Chronic Kidney Impairment ({conf_score:.1f}% Confidence)" if res == 1 else f"Optimal Glomerular Filtration Rate ({conf_score:.1f}% Confidence)"
     rec = "Nephrology evaluation recommended. Schedule urinalysis." if res == 1 else "Ensure adequate daily hydration (2-3L water)."
     
-    card = create_interactive_result_card("Kidney Panel", result_text, "High Risk" if res == 1 else "In-Range", 84 if res == 1 else 10, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history_df(username), get_dashboard_html(username)
+    card = create_interactive_result_card("Kidney Panel", result_text, "High Risk" if res == 1 else "In-Range", conf_score, rec, biomarkers, risk_level, is_risk=(res == 1))
+    pdf_path = generate_medical_pdf(username or "Patient", "Kidney Assessment", result_text, conf_score, biomarkers, rec)
+    
+    return card, gr.update(value=pdf_path, visible=True), get_user_history_df(username), get_dashboard_html(username)
 
 def predict_liver(username, age, gender, tb, db, alk, sgpt, sgot, proteins, albumin, ratio):
     data = np.array([[float(age), 1 if gender == "Male" else 0, float(tb), float(db),
                       float(alk), float(sgpt), float(sgot), float(proteins), float(albumin), float(ratio)]])
-    res = liver_model.predict(data)[0]
+    
+    probs = liver_model.predict_proba(data)[0]
+    res = int(np.argmax(probs))
+    conf_score = float(probs[res] * 100)
+    
     result_text = "Hepatic Enzyme Anomaly" if res == 1 else "Normal Liver Panel"
-    save_user_record(username, "Liver Function", result_text)
+    save_user_record(username, "Liver Function", result_text, conf_score)
     
     biomarkers = f"Total Bilirubin: {tb} | ALT/SGPT: {sgpt} U/L | AST/SGOT: {sgot} U/L"
-    risk_level = "Elevated Transaminases / Hepatic Stress" if res == 1 else "Balanced Hepatic Biomarkers"
+    risk_level = f"Elevated Transaminases / Hepatic Stress ({conf_score:.1f}% Confidence)" if res == 1 else f"Balanced Hepatic Biomarkers ({conf_score:.1f}% Confidence)"
     rec = "Schedule an abdominal ultrasound and review enzymes with a doctor." if res == 1 else "Maintain healthy lifestyle habits."
     
-    card = create_interactive_result_card("Liver Function", result_text, "Elevated Risk" if res == 1 else "In-Range", 78 if res == 1 else 14, rec, biomarkers, risk_level, is_risk=(res == 1))
-    return card, get_user_history_df(username), get_dashboard_html(username)
+    card = create_interactive_result_card("Liver Function", result_text, "Elevated Risk" if res == 1 else "In-Range", conf_score, rec, biomarkers, risk_level, is_risk=(res == 1))
+    pdf_path = generate_medical_pdf(username or "Patient", "Liver Assessment", result_text, conf_score, biomarkers, rec)
+    
+    return card, gr.update(value=pdf_path, visible=True), get_user_history_df(username), get_dashboard_html(username)
 
 def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, ncp, caec, smoke, ch2o, scc, faf, tue, calc, mtrans):
     gender_map, yesno = {"Female": 0, "Male": 1}, {"No": 0, "Yes": 1}
@@ -345,19 +434,24 @@ def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, n
     data = np.array([[gender_map[gender], float(age), float(height), float(weight), yesno[family], yesno[favc],
                       float(fcvc), float(ncp), caec_map[caec], yesno[smoke], float(ch2o), yesno[scc],
                       float(faf), float(tue), calc_map[calc], mtrans_map[mtrans]]])
-    val = int(obesity_model.predict(data)[0])
+    
+    probs = obesity_model.predict_proba(data)[0]
+    val = int(np.argmax(probs))
+    conf_score = float(probs[val] * 100)
     lbl = label_map[val]
-    save_user_record(username, "Body Mass", lbl)
+    
+    save_user_record(username, "Body Mass", lbl, conf_score)
     
     is_risk = val > 1
-    pct = min(100, max(15, val * 16))
     bmi_calc = round(float(weight) / (float(height) ** 2), 2)
     biomarkers = f"Calculated BMI: {bmi_calc} kg/m² | Height: {height}m | Weight: {weight}kg"
-    risk_level = f"Classified Category: {lbl}"
+    risk_level = f"Classified Category: {lbl} ({conf_score:.1f}% Confidence)"
     rec = "Consult with a registered dietitian for personalized meal planning." if is_risk else "Maintain active lifestyle and current caloric balance."
     
-    card = create_interactive_result_card("Body Mass Index", lbl, "Attention" if is_risk else "In-Range", pct, rec, biomarkers, risk_level, is_risk=is_risk)
-    return card, get_user_history_df(username), get_dashboard_html(username)
+    card = create_interactive_result_card("Body Mass Index", lbl, "Attention" if is_risk else "In-Range", conf_score, rec, biomarkers, risk_level, is_risk=is_risk)
+    pdf_path = generate_medical_pdf(username or "Patient", "Body Mass Assessment", lbl, conf_score, biomarkers, rec)
+    
+    return card, gr.update(value=pdf_path, visible=True), get_user_history_df(username), get_dashboard_html(username)
 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
@@ -367,20 +461,20 @@ def handle_user_login(username, password):
         welcome_html = get_welcome_banner(username)
         metrics_html = get_dashboard_html(username)
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "", username, user_hist, welcome_html, metrics_html
-    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Invalid credentials. Please try again.</span>", "", empty_df, "", ""
 
 def handle_admin_login(passcode):
-    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     if passcode == ADMIN_SECRET_KEY:
         return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "", "", empty_df, "", "", get_all_users_df()
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "❌ <span style='color: #DC2626; font-weight: 700;'>Incorrect Admin Key.</span>", "", empty_df, "", "", pd.DataFrame()
 
 def handle_logout():
-    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
+    empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", empty_df, "", ""
 
-# --- RESPONSIVE CSS ---
+# --- RESPONSIVE CSS (MOBILE + DESKTOP) ---
 css = """
 :root {
     --bg-main: #EBE8F9;
@@ -478,6 +572,26 @@ button.logout-btn {
     font-weight: 800 !important;
     border-radius: 10px !important;
     width: 100% !important;
+}
+
+/* MOBILE-FIRST OPTIMIZATIONS */
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    .metric-card:last-child {
+        grid-column: span 2;
+    }
+    .horizontal-tabs-container button[role="tab"] {
+        font-size: 0.75rem !important;
+        padding: 6px 10px !important;
+        margin-bottom: 4px !important;
+    }
+    .lavender-card {
+        padding: 10px !important;
+        border-radius: 14px !important;
+    }
 }
 """
 
@@ -596,6 +710,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         heart_btn = gr.Button("⚡ Run Cardiac Risk Evaluation", elem_classes=["primary-btn"])
                         heart_output = gr.HTML()
+                        heart_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
 
                 with gr.Tab("🩸 Diabetes Diagnostic"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -614,6 +729,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         diabetes_btn = gr.Button("⚡ Analyze Glycemic Profile", elem_classes=["primary-btn"])
                         diabetes_output = gr.HTML()
+                        diabetes_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
 
                 with gr.Tab("🫘 Kidney Function"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -634,6 +750,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         kidney_btn = gr.Button("⚡ Run Renal Function Assessment", elem_classes=["primary-btn"])
                         kidney_output = gr.HTML()
+                        kidney_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
 
                 with gr.Tab("🫀 Liver Function"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -654,6 +771,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         liver_btn = gr.Button("⚡ Analyze Hepatic Panel", elem_classes=["primary-btn"])
                         liver_output = gr.HTML()
+                        liver_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
 
                 with gr.Tab("⚖️ Mass & Lifestyle"):
                     with gr.Column(elem_classes=["scroll-panel"]):
@@ -681,11 +799,12 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
                         obesity_btn = gr.Button("⚡ Analyze Body Mass Profile", elem_classes=["primary-btn"])
                         obesity_output = gr.HTML()
+                        obesity_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=False)
 
                 with gr.Tab("📜 Medical History Log"):
                     with gr.Column(elem_classes=["scroll-panel"]):
                         gr.Markdown("#### Patient Log History")
-                        history_table = gr.Dataframe(value=pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"]), interactive=False)
+                        history_table = gr.Dataframe(value=pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"]), interactive=False)
                         refresh_history_btn = gr.Button("🔄 Refresh Saved Records", elem_classes=["primary-btn"])
 
     # ------------------ ADMIN PANEL PAGE ------------------
@@ -717,12 +836,12 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
     refresh_btn.click(get_all_users_df, inputs=[], outputs=[user_table])
     delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users_df, inputs=[], outputs=[user_table])
 
-    # Dynamic Model Predictions with Live Dashboard & Table Updates
-    heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=[heart_output, history_table, metrics_banner])
-    diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=[diabetes_output, history_table, metrics_banner])
-    kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=[kidney_output, history_table, metrics_banner])
-    liver_btn.click(predict_liver, inputs=[current_user_state, l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=[liver_output, history_table, metrics_banner])
-    obesity_btn.click(predict_obesity, inputs=[current_user_state, o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=[obesity_output, history_table, metrics_banner])
+    # Model Predictions & Dynamic Downloads
+    heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=[heart_output, heart_pdf_download, history_table, metrics_banner])
+    diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=[diabetes_output, diabetes_pdf_download, history_table, metrics_banner])
+    kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=[kidney_output, kidney_pdf_download, history_table, metrics_banner])
+    liver_btn.click(predict_liver, inputs=[current_user_state, l_age, l_gender, l_tb, l_db, l_alk, l_sgpt, l_sgot, l_proteins, l_albumin, l_ratio], outputs=[liver_output, liver_pdf_download, history_table, metrics_banner])
+    obesity_btn.click(predict_obesity, inputs=[current_user_state, o_gender, o_age, o_height, o_weight, o_family, o_favc, o_fcvc, o_ncp, o_caec, o_smoke, o_ch2o, o_scc, o_faf, o_tue, o_calc, o_mtrans], outputs=[obesity_output, obesity_pdf_download, history_table, metrics_banner])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
