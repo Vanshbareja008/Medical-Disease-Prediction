@@ -12,8 +12,12 @@ DB_FILE = "users.db"
 ADMIN_SECRET_KEY = "admin@123"
 
 # --- DATABASE SETUP ---
+def get_db_connection():
+    # Adding timeout=15 prevents 'database is locked' errors on concurrent access on hosting platforms
+    return sqlite3.connect(DB_FILE, timeout=15)
+
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -49,7 +53,7 @@ def register_user(username, password, confirm_password):
         return "❌ <span style='color: #DC2626; font-weight: 700;'>Passwords do not match.</span>"
     
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", 
                        (username, hash_password(password)))
@@ -60,7 +64,7 @@ def register_user(username, password, confirm_password):
         return "❌ <span style='color: #DC2626; font-weight: 700;'>Username already exists.</span>"
 
 def verify_user(username, password):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username.strip(),))
     row = cursor.fetchone()
@@ -70,44 +74,65 @@ def verify_user(username, password):
 # --- SAVE & RETRIEVE USER DIAGNOSTIC RECORDS ---
 def save_user_record(username, test_type, result_summary):
     if not username:
+        print("DEBUG: [save_user_record] Skipped save because username is empty.")
         return
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
-        "INSERT INTO lab_history (username, test_type, result_summary, timestamp) VALUES (?, ?, ?, ?)",
-        (username, test_type, result_summary, time_str)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute(
+            "INSERT INTO lab_history (username, test_type, result_summary, timestamp) VALUES (?, ?, ?, ?)",
+            (username, test_type, result_summary, time_str)
+        )
+        conn.commit()
+        conn.close()
+        print(f"DEBUG: [save_user_record] Successfully saved record for '{username}' - {test_type}")
+    except Exception as e:
+        print(f"DEBUG: [save_user_record] Database Write Error: {e}")
 
 def get_user_history_df(username):
+    print(f"DEBUG: [get_user_history_df] Fetching history for user: '{username}'")
     if not username:
         return pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT test_type, result_summary, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", (username,))
-    rows = cursor.fetchall()
-    conn.close()
-    return pd.DataFrame(rows, columns=["Test Module", "Outcome Result", "Date & Time"])
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT test_type, result_summary, timestamp FROM lab_history WHERE username = ? ORDER BY id DESC", 
+            (username,)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        
+        df = pd.DataFrame(rows, columns=["Test Module", "Outcome Result", "Date & Time"])
+        print(f"DEBUG: [get_user_history_df] Fetched {len(df)} records.")
+        return df
+    except Exception as e:
+        print(f"DEBUG: [get_user_history_df] Database Read Error: {e}")
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
 
 def get_dashboard_counts(username):
     if not username:
         return 0, 0, 0, 0, 0
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ?", (username,))
-    total = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Heart Disease'", (username,))
-    heart = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Diabetes Analysis'", (username,))
-    diabetes = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Kidney Function'", (username,))
-    kidney = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Liver Function'", (username,))
-    liver = cursor.fetchone()[0]
-    conn.close()
-    return total, heart, diabetes, kidney, liver
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ?", (username,))
+        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Heart Disease'", (username,))
+        heart = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Diabetes Analysis'", (username,))
+        diabetes = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Kidney Function'", (username,))
+        kidney = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM lab_history WHERE username = ? AND test_type = 'Liver Function'", (username,))
+        liver = cursor.fetchone()[0]
+        conn.close()
+        return total, heart, diabetes, kidney, liver
+    except Exception as e:
+        print(f"DEBUG: [get_dashboard_counts] Error: {e}")
+        return 0, 0, 0, 0, 0
 
 def get_dashboard_html(username):
     t, h, d, k, l = get_dashboard_counts(username)
@@ -158,29 +183,36 @@ def get_welcome_banner(username):
 
 # --- ADMIN DATABASE FUNCTIONS ---
 def get_all_users_df():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users")
-    rows = cursor.fetchall()
-    conn.close()
-    return pd.DataFrame(rows, columns=["User ID", "Registered Username"])
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username FROM users")
+        rows = cursor.fetchall()
+        conn.close()
+        return pd.DataFrame(rows, columns=["User ID", "Registered Username"])
+    except Exception as e:
+        print(f"DEBUG: [get_all_users_df] Error: {e}")
+        return pd.DataFrame(columns=["User ID", "Registered Username"])
 
 def delete_user_by_username(username_to_delete):
     username_to_delete = username_to_delete.strip()
     if not username_to_delete:
         return "❌ <span style='color: #DC2626; font-weight: 700;'>Please enter a valid username.</span>"
         
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE username = ?", (username_to_delete,))
-    cursor.execute("DELETE FROM lab_history WHERE username = ?", (username_to_delete,))
-    deleted_count = cursor.rowcount
-    conn.commit()
-    conn.close()
-    
-    if deleted_count > 0:
-        return f"✅ <span style='color: #059669; font-weight: 700;'>User '{username_to_delete}' deleted successfully.</span>"
-    return "❌ <span style='color: #DC2626; font-weight: 700;'>User not found.</span>"
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE username = ?", (username_to_delete,))
+        cursor.execute("DELETE FROM lab_history WHERE username = ?", (username_to_delete,))
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        if deleted_count > 0:
+            return f"✅ <span style='color: #059669; font-weight: 700;'>User '{username_to_delete}' deleted successfully.</span>"
+        return "❌ <span style='color: #DC2626; font-weight: 700;'>User not found.</span>"
+    except Exception as e:
+        return f"❌ <span style='color: #DC2626; font-weight: 700;'>Error deleting user: {e}</span>"
 
 # --- LOAD MODELS ---
 heart_model = joblib.load("heart diagn.pkl")
@@ -329,6 +361,7 @@ def predict_obesity(username, gender, age, height, weight, family, favc, fcvc, n
 
 # --- NAVIGATION HANDLERS ---
 def handle_user_login(username, password):
+    username = username.strip()
     if verify_user(username, password):
         user_hist = get_user_history_df(username)
         welcome_html = get_welcome_banner(username)
@@ -347,7 +380,7 @@ def handle_logout():
     empty_df = pd.DataFrame(columns=["Test Module", "Outcome Result", "Date & Time"])
     return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "", "", empty_df, "", ""
 
-# --- CROSS-PLATFORM MOBILE & LAPTOP RESPONSIVE CSS ---
+# --- RESPONSIVE CSS ---
 css = """
 :root {
     --bg-main: #EBE8F9;
@@ -377,11 +410,7 @@ body, .gradio-container {
     overflow-y: auto !important;
     padding-right: 4px;
 }
-.scroll-panel::-webkit-scrollbar { width: 5px; }
-.scroll-panel::-webkit-scrollbar-track { background: #F4F4F5; border-radius: 10px; }
-.scroll-panel::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 10px; }
 
-/* METRICS GRID RESPONSIVE STYLING */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -412,25 +441,6 @@ body, .gradio-container {
     margin-top: 2px;
 }
 
-/* HORIZONTALLY SCROLLABLE TABS CONTAINER FIX */
-.horizontal-tabs-container {
-    overflow: visible !important;
-}
-
-.horizontal-tabs-container > div:first-child,
-.horizontal-tabs-container div.tab-nav {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    white-space: nowrap !important;
-    padding-bottom: 6px !important;
-    padding-right: 24px !important;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    width: 100% !important;
-}
-
 .horizontal-tabs-container button[role="tab"] {
     color: #52525B !important;
     font-weight: 700 !important;
@@ -440,29 +450,12 @@ body, .gradio-container {
     border-radius: 10px !important;
     padding: 8px 14px !important;
     margin-right: 6px !important;
-    flex-shrink: 0 !important;
-    min-width: max-content !important;
 }
 
 .horizontal-tabs-container button[role="tab"][aria-selected="true"] {
     color: #FFFFFF !important;
     background: var(--accent-purple) !important;
     border-color: var(--accent-purple) !important;
-}
-
-label span { 
-    color: var(--text-primary) !important; 
-    font-weight: 700 !important; 
-    font-size: 0.82rem !important;
-}
-
-input, select, textarea {
-    background-color: #F8FAFC !important;
-    color: var(--text-primary) !important;
-    border: 1px solid #E2E8F0 !important;
-    border-radius: 10px !important;
-    padding: 8px 12px !important;
-    font-size: 0.9rem !important;
 }
 
 button.primary-btn {
@@ -485,22 +478,6 @@ button.logout-btn {
     font-weight: 800 !important;
     border-radius: 10px !important;
     width: 100% !important;
-}
-
-/* MOBILE RESPONSIVE MEDIA QUERIES */
-@media (max-width: 768px) {
-    .metrics-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    .metric-card {
-        padding: 8px 4px;
-    }
-    .metric-val {
-        font-size: 1.1rem;
-    }
-    .lavender-card {
-        padding: 12px !important;
-    }
 }
 """
 
@@ -563,7 +540,6 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
     # ------------------ MAIN CLINICAL DASHBOARD ------------------
     with gr.Row(visible=False, elem_classes=["lavender-card"]) as user_dashboard_view:
-        # SIDEBAR PANEL
         with gr.Column(scale=1, min_width=220):
             gr.HTML("""
             <div style="text-align: center; padding-bottom: 6px;">
@@ -590,14 +566,12 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             gr.Markdown("---")
             user_logout_btn = gr.Button("🚪 Sign Out", elem_classes=["logout-btn"])
 
-        # MAIN CONTENT AREA
         with gr.Column(scale=4):
             welcome_banner = gr.HTML()
             metrics_banner = gr.HTML()
             
             gr.Markdown("---")
 
-            # RESPONSIVE SCROLLABLE TABS
             with gr.Tabs(elem_classes=["horizontal-tabs-container"]):
                 with gr.Tab("❤️ Heart Diagnostic"):
                     with gr.Column(elem_classes=["scroll-panel"]):
