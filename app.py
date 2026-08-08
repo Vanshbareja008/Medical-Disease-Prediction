@@ -5,7 +5,6 @@ import gradio as gr
 
 # --- IN-MEMORY SESSION & DATA STORE ---
 
-# Dynamic user history cache: { "username": [ {"Test Module": ..., "Outcome Result": ..., "Confidence": ..., "Date & Time": ...} ] }
 USER_HISTORY_DB = {}
 
 def get_user_history_df(username=""):
@@ -32,7 +31,6 @@ def append_history_record(username, module_name, outcome, confidence):
         "Date & Time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    # Insert newest log at the top
     USER_HISTORY_DB[username].insert(0, new_entry)
     return get_user_history_df(username)
 
@@ -150,10 +148,9 @@ def delete_user_by_username(username):
 # --- DIAGNOSTIC EVALUATION PIPELINE ---
 
 def execute_clinical_predict(username, module_name, img_url, summary_text, recommendations, outcome="Low Risk (11.4%)", confidence="96.8%"):
-    # 1. Store result dynamically to patient history log
     updated_history_df = append_history_record(username, module_name, outcome, confidence)
     
-    # 2. Build high-contrast result UI card
+    # Result HTML card with AI Warning Disclaimer & XGBoost term removed
     result_html = f"""
     <div class='eval-badge-success'>
         <div style='display: flex; align-items: flex-start; gap: 16px;'>
@@ -165,6 +162,12 @@ def execute_clinical_predict(username, module_name, img_url, summary_text, recom
                     <h3 style='color: #065F46 !important; margin: 0; font-size: 1.15rem; font-weight: 800;'>✅ {module_name} Assessment Complete</h3>
                     <span style='background: #059669; color: #FFFFFF !important; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;'>LOW RISK</span>
                 </div>
+                
+                <!-- MEDICAL WARNING DISCLAIMER -->
+                <div style='background: #FEF3C7; border: 1px solid #F59E0B; padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; color: #78350F !important;'>
+                    ⚠️ Notice: This is an AI-generated report. Please consult a qualified doctor first before taking clinical action.
+                </div>
+
                 <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px;'>
                     <div style='background: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px;'>
                         <span style='color: #047857 !important; font-size: 0.75rem; font-weight: 700;'>Statistical Risk Level:</span>
@@ -172,7 +175,7 @@ def execute_clinical_predict(username, module_name, img_url, summary_text, recom
                     </div>
                     <div style='background: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px;'>
                         <span style='color: #047857 !important; font-size: 0.75rem; font-weight: 700;'>Model Confidence Score:</span>
-                        <strong style='color: #065F46 !important; display: block; font-size: 0.95rem;'>{confidence} (XGBoost)</strong>
+                        <strong style='color: #065F46 !important; display: block; font-size: 0.95rem;'>{confidence}</strong>
                     </div>
                 </div>
                 <p style='color: #065F46 !important; margin: 0 0 6px 0; font-size: 0.85rem; line-height: 1.4;'><strong>Clinical Summary:</strong> {summary_text}</p>
@@ -212,7 +215,7 @@ def predict_obesity(username, *args):
     return execute_clinical_predict(username, "Mass & Lifestyle Analysis", "https://img.icons8.com/color/96/scale.png", "Body Mass Index (BMI 22.8) aligns with standard physiological targets.", "Sustain current weekly physical exercise routine.", "Normal BMI (22.8)", "99.0%")
 
 
-# --- GRADIO THEME & HIGH-CONTRAST SCOPED CSS ---
+# --- GRADIO THEME & STYLES ---
 
 custom_theme = gr.themes.Soft(
     primary_hue="purple",
@@ -233,7 +236,12 @@ css = """
     --input-text-color: #FFFFFF;
 }
 
-/* App Container Overlay */
+/* Tab Header Text Size Reduction so Obesity fits on bar */
+button.tabnav-button {
+    font-size: 0.82rem !important;
+    padding: 6px 10px !important;
+}
+
 .gradio-container {
     background-image: linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
     background-size: cover !important;
@@ -241,7 +249,6 @@ css = """
     background-attachment: fixed !important;
 }
 
-/* Custom Image Wrapper Icons */
 .icon-wrapper-large {
     background-color: #FFFFFF !important;
     border-radius: 12px;
@@ -297,7 +304,6 @@ css = """
     object-fit: contain;
 }
 
-/* Status Banners */
 .welcome-banner {
     background: linear-gradient(135deg, #6D28D9 0%, #4C1D95 100%);
     border-radius: 12px;
@@ -316,7 +322,6 @@ css = """
 .status-tag { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-weight: 800; font-size: 0.7rem; color: #FFFFFF !important; }
 .date-badge { background: rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; color: #FFFFFF !important; }
 
-/* Metrics Dashboard Grid */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -338,7 +343,6 @@ css = """
 .metric-title { color: #94A3B8 !important; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
 .metric-val { color: #F8FAFC !important; font-size: 1.1rem; font-weight: 900; margin-top: 2px; }
 
-/* HIGH-CONTRAST NOTICE BOX (OVERRIDING LIGHT-ON-LIGHT TEXT) */
 .notice-box {
     background-color: #FEF3C7 !important;
     border: 1px solid #F59E0B !important;
@@ -355,7 +359,6 @@ css = """
     color: #78350F !important;
 }
 
-/* Custom Evaluation Badges */
 .eval-badge-success {
     background-color: #D1FAE5 !important;
     border: 2px solid #10B981 !important;
@@ -481,8 +484,9 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
             
             gr.Markdown("---")
 
+            # Shorter tab titles ensure Obesity ("⚖️ Obesity") stays fully visible without triggering overflow 3 dots
             with gr.Tabs():
-                with gr.Tab("❤️ Heart Diagnostic"):
+                with gr.Tab("❤️ Heart"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -512,7 +516,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                     heart_btn = gr.Button("⚡ Run Cardiac Risk Evaluation", variant="primary")
                     heart_output = gr.HTML()
 
-                with gr.Tab("🩸 Diabetes Diagnostic"):
+                with gr.Tab("🩸 Diabetes"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -536,7 +540,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                     diabetes_btn = gr.Button("⚡ Analyze Glycemic Profile", variant="primary")
                     diabetes_output = gr.HTML()
 
-                with gr.Tab("🫘 Kidney Function"):
+                with gr.Tab("🫘 Kidney"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -562,7 +566,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                     kidney_btn = gr.Button("⚡ Run Renal Function Assessment", variant="primary")
                     kidney_output = gr.HTML()
 
-                with gr.Tab("🫀 Liver Function"):
+                with gr.Tab("🫀 Liver"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -588,7 +592,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                     liver_btn = gr.Button("⚡ Analyze Hepatic Panel", variant="primary")
                     liver_output = gr.HTML()
 
-                with gr.Tab("⚖️ Mass & Lifestyle"):
+                with gr.Tab("⚖️ Obesity"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -621,7 +625,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                     obesity_btn = gr.Button("⚡ Evaluate Body Mass Profile", variant="primary")
                     obesity_output = gr.HTML()
 
-                with gr.Tab("📜 Medical History Log"):
+                with gr.Tab("📜 History"):
                     gr.HTML("""
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <div class="icon-wrapper-small">
@@ -668,7 +672,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
     refresh_btn.click(get_all_users_df, inputs=[], outputs=[user_table])
     delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users_df, inputs=[], outputs=[user_table])
 
-    # Model Predictions (Binding logged user state)
+    # Model Predictions
     heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=[heart_output, history_table, metrics_banner])
     diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=[diabetes_output, history_table, metrics_banner])
     kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=[kidney_output, history_table, metrics_banner])
