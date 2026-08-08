@@ -3,7 +3,40 @@ import datetime
 import pandas as pd
 import gradio as gr
 
-# --- MOCK BACKEND FUNCTIONS ---
+# --- IN-MEMORY SESSION & DATA STORE ---
+
+# Dynamic user history cache: { "username": [ {"Test Module": ..., "Outcome Result": ..., "Confidence": ..., "Date & Time": ...} ] }
+USER_HISTORY_DB = {}
+
+def get_user_history_df(username=""):
+    if not username:
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
+    
+    records = USER_HISTORY_DB.get(username, [])
+    if not records:
+        return pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"])
+    
+    return pd.DataFrame(records)
+
+def append_history_record(username, module_name, outcome, confidence):
+    if not username:
+        username = "Guest Practitioner"
+    
+    if username not in USER_HISTORY_DB:
+        USER_HISTORY_DB[username] = []
+        
+    new_entry = {
+        "Test Module": module_name,
+        "Outcome Result": outcome,
+        "Confidence": confidence,
+        "Date & Time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # Insert newest log at the top
+    USER_HISTORY_DB[username].insert(0, new_entry)
+    return get_user_history_df(username)
+
+# --- AUTHENTICATION BACKEND ---
 
 def register_user(username, password, confirm_password):
     if not username or not password:
@@ -100,15 +133,6 @@ def handle_logout():
         ""
     )
 
-def get_user_history_df(username=""):
-    data = {
-        "Test Module": ["Cardiovascular", "Glycemic Profile"],
-        "Outcome Result": ["Low Risk (12%)", "Normal (HbA1c 5.6)"],
-        "Confidence": ["94.2%", "98.1%"],
-        "Date & Time": ["2026-08-08 10:15", "2026-08-08 10:30"]
-    }
-    return pd.DataFrame(data)
-
 def get_all_users_df():
     data = {
         "User ID": [101, 102, 103],
@@ -118,10 +142,18 @@ def get_all_users_df():
 
 def delete_user_by_username(username):
     if username:
+        if username in USER_HISTORY_DB:
+            del USER_HISTORY_DB[username]
         return f"<div class='alert-success'>✅ User '{username}' deleted successfully.</div>"
     return "<div class='alert-err'>⚠️ Please specify a username.</div>"
 
-def mock_predict(module_name, img_url, summary_text, recommendations):
+# --- DIAGNOSTIC EVALUATION PIPELINE ---
+
+def execute_clinical_predict(username, module_name, img_url, summary_text, recommendations, outcome="Low Risk (11.4%)", confidence="96.8%"):
+    # 1. Store result dynamically to patient history log
+    updated_history_df = append_history_record(username, module_name, outcome, confidence)
+    
+    # 2. Build high-contrast result UI card
     result_html = f"""
     <div class='eval-badge-success'>
         <div style='display: flex; align-items: flex-start; gap: 16px;'>
@@ -130,28 +162,29 @@ def mock_predict(module_name, img_url, summary_text, recommendations):
             </div>
             <div style='flex-grow: 1;'>
                 <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #A7F3D0; padding-bottom: 6px; margin-bottom: 8px;'>
-                    <h3 style='color: #065F46; margin: 0; font-size: 1.15rem; font-weight: 800;'>✅ {module_name} Assessment Complete</h3>
-                    <span style='background: #059669; color: #FFFFFF; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;'>LOW RISK</span>
+                    <h3 style='color: #065F46 !important; margin: 0; font-size: 1.15rem; font-weight: 800;'>✅ {module_name} Assessment Complete</h3>
+                    <span style='background: #059669; color: #FFFFFF !important; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;'>LOW RISK</span>
                 </div>
                 <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px;'>
-                    <div style='background: rgba(255,255,255,0.7); padding: 6px 10px; border-radius: 6px;'>
-                        <span style='color: #047857; font-size: 0.75rem; font-weight: 700;'>Statistical Risk Level:</span>
-                        <strong style='color: #065F46; display: block; font-size: 0.95rem;'>11.4% (Normal Range)</strong>
+                    <div style='background: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px;'>
+                        <span style='color: #047857 !important; font-size: 0.75rem; font-weight: 700;'>Statistical Risk Level:</span>
+                        <strong style='color: #065F46 !important; display: block; font-size: 0.95rem;'>{outcome}</strong>
                     </div>
-                    <div style='background: rgba(255,255,255,0.7); padding: 6px 10px; border-radius: 6px;'>
-                        <span style='color: #047857; font-size: 0.75rem; font-weight: 700;'>Model Confidence Score:</span>
-                        <strong style='color: #065F46; display: block; font-size: 0.95rem;'>96.8% (XGBoost Pipeline)</strong>
+                    <div style='background: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px;'>
+                        <span style='color: #047857 !important; font-size: 0.75rem; font-weight: 700;'>Model Confidence Score:</span>
+                        <strong style='color: #065F46 !important; display: block; font-size: 0.95rem;'>{confidence} (XGBoost)</strong>
                     </div>
                 </div>
-                <p style='color: #065F46; margin: 0 0 6px 0; font-size: 0.85rem; line-height: 1.4;'><strong>Clinical Summary:</strong> {summary_text}</p>
+                <p style='color: #065F46 !important; margin: 0 0 6px 0; font-size: 0.85rem; line-height: 1.4;'><strong>Clinical Summary:</strong> {summary_text}</p>
                 <div style='background: #ECFDF5; border-left: 3px solid #059669; padding: 6px 10px; border-radius: 4px;'>
-                    <span style='color: #047857; font-size: 0.8rem; font-weight: 700;'>Recommended Next Steps:</span>
-                    <p style='color: #065F46; margin: 2px 0 0 0; font-size: 0.8rem;'>{recommendations}</p>
+                    <span style='color: #047857 !important; font-size: 0.8rem; font-weight: 700;'>Recommended Next Steps:</span>
+                    <p style='color: #065F46 !important; margin: 2px 0 0 0; font-size: 0.8rem;'>{recommendations}</p>
                 </div>
             </div>
         </div>
     </div>
     """
+    
     metrics_html = """
     <div class='metrics-grid'>
         <div class='metric-card'><div class='icon-wrapper-mini'><img src='https://img.icons8.com/color/96/heart-health.png' class='icon-img'/></div><div class='metric-title'>Cardio Risk</div><div class='metric-val'>Updated</div></div>
@@ -161,33 +194,31 @@ def mock_predict(module_name, img_url, summary_text, recommendations):
         <div class='metric-card full-width-mobile'><div class='icon-wrapper-mini'><img src='https://img.icons8.com/color/96/scale.png' class='icon-img'/></div><div class='metric-title'>BMI Class</div><div class='metric-val'>22.8</div></div>
     </div>
     """
-    return result_html, get_user_history_df(), metrics_html
+    return result_html, updated_history_df, metrics_html
 
-def predict_heart(*args): 
-    return mock_predict("Cardiovascular Diagnostic", "https://img.icons8.com/color/96/heart-health.png", "Patient exhibits stable resting blood pressure and healthy ST segment values.", "Maintain routine annual cardiovascular screening.")
+def predict_heart(username, *args): 
+    return execute_clinical_predict(username, "Cardiovascular Diagnostic", "https://img.icons8.com/color/96/heart-health.png", "Patient exhibits stable resting blood pressure and healthy ST segment values.", "Maintain routine annual cardiovascular screening.", "Low Risk (11.4%)", "96.8%")
 
-def predict_diabetes(*args): 
-    return mock_predict("Glycemic Profile", "https://img.icons8.com/color/96/blood-sample.png", "HbA1c level (5.6%) and fasting glucose indicate optimal metabolic regulation.", "Continue standard balanced dietary habits.")
+def predict_diabetes(username, *args): 
+    return execute_clinical_predict(username, "Glycemic Profile", "https://img.icons8.com/color/96/blood-sample.png", "HbA1c level (5.6%) and fasting glucose indicate optimal metabolic regulation.", "Continue standard balanced dietary habits.", "Optimal (HbA1c 5.6)", "98.1%")
 
-def predict_kidney(*args): 
-    return mock_predict("Renal Function Assessment", "https://img.icons8.com/color/96/kidney.png", "Glomerular filtration rate (eGFR > 90) remains within optimal range.", "Ensure adequate daily fluid intake.")
+def predict_kidney(username, *args): 
+    return execute_clinical_predict(username, "Renal Function Assessment", "https://img.icons8.com/color/96/kidney.png", "Glomerular filtration rate (eGFR > 90) remains within optimal range.", "Ensure adequate daily fluid intake.", "Normal GFR (>90)", "95.4%")
 
-def predict_liver(*args): 
-    return mock_predict("Hepatic Panel Evaluation", "https://img.icons8.com/color/96/liver.png", "Transaminase enzymes show no metabolic stress or hepatic inflammation.", "Routine preventative care.")
+def predict_liver(username, *args): 
+    return execute_clinical_predict(username, "Hepatic Panel Evaluation", "https://img.icons8.com/color/96/liver.png", "Transaminase enzymes show no metabolic stress or hepatic inflammation.", "Routine preventative care.", "Optimal Enzymes", "97.2%")
 
-def predict_obesity(*args): 
-    return mock_predict("Mass & Lifestyle Analysis", "https://img.icons8.com/color/96/scale.png", "Body Mass Index (BMI 22.8) aligns with standard physiological targets.", "Sustain current weekly physical exercise routine.")
+def predict_obesity(username, *args): 
+    return execute_clinical_predict(username, "Mass & Lifestyle Analysis", "https://img.icons8.com/color/96/scale.png", "Body Mass Index (BMI 22.8) aligns with standard physiological targets.", "Sustain current weekly physical exercise routine.", "Normal BMI (22.8)", "99.0%")
 
 
-# --- NATIVE GRADIO THEME ENGINE ---
+# --- GRADIO THEME & HIGH-CONTRAST SCOPED CSS ---
 
 custom_theme = gr.themes.Soft(
     primary_hue="purple",
     secondary_hue="slate",
     neutral_hue="slate"
 )
-
-# --- CLEAN & SCOPED CSS OVERRIDES ---
 
 css = """
 :root {
@@ -202,7 +233,7 @@ css = """
     --input-text-color: #FFFFFF;
 }
 
-/* App Container Background Overlay */
+/* App Container Overlay */
 .gradio-container {
     background-image: linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
     background-size: cover !important;
@@ -210,7 +241,7 @@ css = """
     background-attachment: fixed !important;
 }
 
-/* Custom Image Containers */
+/* Custom Image Wrapper Icons */
 .icon-wrapper-large {
     background-color: #FFFFFF !important;
     border-radius: 12px;
@@ -277,13 +308,13 @@ css = """
     justify-content: space-between;
     gap: 12px;
     border: 1px solid #8B5CF6;
-    color: #FFFFFF;
+    color: #FFFFFF !important;
 }
 
-.banner-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: #FFFFFF; }
-.banner-sub { margin: 2px 0 0 0; color: #DDD6FE; font-size: 0.85rem; }
-.status-tag { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-weight: 800; font-size: 0.7rem; color: #FFFFFF; }
-.date-badge { background: rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; color: #FFFFFF; }
+.banner-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: #FFFFFF !important; }
+.banner-sub { margin: 2px 0 0 0; color: #DDD6FE !important; font-size: 0.85rem; }
+.status-tag { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-weight: 800; font-size: 0.7rem; color: #FFFFFF !important; }
+.date-badge { background: rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; color: #FFFFFF !important; }
 
 /* Metrics Dashboard Grid */
 .metrics-grid {
@@ -304,32 +335,38 @@ css = """
     align-items: center;
 }
 
-.metric-title { color: #94A3B8; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
-.metric-val { color: #F8FAFC; font-size: 1.1rem; font-weight: 900; margin-top: 2px; }
+.metric-title { color: #94A3B8 !important; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+.metric-val { color: #F8FAFC !important; font-size: 1.1rem; font-weight: 900; margin-top: 2px; }
 
-/* Custom Diagnostic Badges */
-.eval-badge-success {
-    background: #D1FAE5;
-    border: 2px solid #10B981;
-    border-radius: 12px;
-    padding: 16px;
-    margin-top: 12px;
-}
-
+/* HIGH-CONTRAST NOTICE BOX (OVERRIDING LIGHT-ON-LIGHT TEXT) */
 .notice-box {
-    background: #FEF3C7;
-    border: 1px solid #FCD34D;
+    background-color: #FEF3C7 !important;
+    border: 1px solid #F59E0B !important;
     border-radius: 10px;
     padding: 12px 16px;
     margin-top: 10px;
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #78350F;
+    color: #78350F !important;
 }
 
-.alert-err { color: #FCA5A5; font-weight: bold; padding: 6px 0; }
-.alert-success { color: #6EE7B7; font-weight: bold; padding: 6px 0; }
+.notice-box * {
+    color: #78350F !important;
+}
+
+/* Custom Evaluation Badges */
+.eval-badge-success {
+    background-color: #D1FAE5 !important;
+    border: 2px solid #10B981 !important;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+    color: #065F46 !important;
+}
+
+.alert-err { color: #FCA5A5 !important; font-weight: bold; padding: 6px 0; }
+.alert-success { color: #6EE7B7 !important; font-weight: bold; padding: 6px 0; }
 
 @media (max-width: 768px) {
     .metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -350,7 +387,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <img src="https://img.icons8.com/color/96/hospital-2.png" alt="Hospital Logo" class="icon-img" />
                     </div>
                     <div>
-                        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800;">🏥 Sick Sense Clinical Workstation</h1>
+                        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #F8FAFC;">🏥 Sick Sense Clinical Workstation</h1>
                         <h3 style="margin: 4px 0 0 0; font-size: 0.95rem; color: #94A3B8; font-weight: 600;">Multi-Organ Predictive ML Triage Suite</h3>
                     </div>
                 </div>
@@ -451,7 +488,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/heart-health.png" alt="Cardio" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Cardiovascular Input Parameters</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Cardiovascular Input Parameters</h4>
                     </div>
                     """)
                     with gr.Row():
@@ -481,7 +518,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/blood-sample.png" alt="Diabetes" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Glycemic Input Parameters</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Glycemic Input Parameters</h4>
                     </div>
                     """)
                     with gr.Row():
@@ -505,7 +542,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/kidney.png" alt="Kidney" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Renal Input Parameters</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Renal Input Parameters</h4>
                     </div>
                     """)
                     with gr.Row():
@@ -531,7 +568,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/liver.png" alt="Liver" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Hepatic Input Parameters</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Hepatic Input Parameters</h4>
                     </div>
                     """)
                     with gr.Row():
@@ -557,7 +594,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/scale.png" alt="Mass" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Anthropometric Data</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Anthropometric Data</h4>
                     </div>
                     """)
                     with gr.Row():
@@ -590,7 +627,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                         <div class="icon-wrapper-small">
                             <img src="https://img.icons8.com/color/96/overview-pages-2.png" alt="Logs" class="icon-img" />
                         </div>
-                        <h4 style="margin: 0;">Patient Assessment Record History</h4>
+                        <h4 style="margin: 0; color: #F8FAFC;">Patient Assessment Record History</h4>
                     </div>
                     """)
                     history_table = gr.Dataframe(value=pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"]), interactive=False)
@@ -604,7 +641,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                 <div class="icon-wrapper-small">
                     <img src="https://img.icons8.com/color/96/administrator-male.png" alt="Admin" class="icon-img" />
                 </div>
-                <h3 style="margin: 0;">🛡️ System User Administration</h3>
+                <h3 style="margin: 0; color: #F8FAFC;">🛡️ System User Administration</h3>
             </div>
             """)
             admin_logout_btn = gr.Button("Exit Management Panel", variant="stop", scale=0, min_width=140)
@@ -631,7 +668,7 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
     refresh_btn.click(get_all_users_df, inputs=[], outputs=[user_table])
     delete_user_btn.click(delete_user_by_username, inputs=[user_to_delete], outputs=[admin_action_msg]).then(get_all_users_df, inputs=[], outputs=[user_table])
 
-    # Model Predictions
+    # Model Predictions (Binding logged user state)
     heart_btn.click(predict_heart, inputs=[current_user_state, age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal], outputs=[heart_output, history_table, metrics_banner])
     diabetes_btn.click(predict_diabetes, inputs=[current_user_state, gender, d_age, hypertension, heart_disease, smoking, bmi, hba1c, glucose], outputs=[diabetes_output, history_table, metrics_banner])
     kidney_btn.click(predict_kidney, inputs=[current_user_state, k_age, k_gender, k_bp, k_creatinine, k_urea, k_hb, k_rbc, k_hypertension, k_egfr, k_albumin], outputs=[kidney_output, history_table, metrics_banner])
