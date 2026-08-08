@@ -121,94 +121,102 @@ def predict_liver(*args): return mock_predict("Liver Function")
 def predict_obesity(*args): return mock_predict("Mass & Lifestyle")
 
 
-# --- DUAL LIGHT / DARK MODE CSS SYSTEM ---
+# --- DUAL LIGHT / DARK MODE CSS SYSTEM WITH BACKGROUND IMAGE ---
 
 css = """
-/* 1. Global Light Theme Definitions */
+/* 1. Global Background Image on Main Wrapper */
+.gradio-container {
+    background-image: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
+}
+
+/* 2. Light Mode Glassmorphism Custom Variables */
 :root {
-    --bg-primary: #FFFFFF;
-    --bg-card: #FAF5FF;
-    --bg-card-subtle: #F3E8FF;
-    --bg-metric: #FFFFFF;
-    --border-color: #E2E0F0;
-    --border-subtle: #E9D5FF;
+    --bg-card: rgba(255, 255, 255, 0.82);
+    --bg-card-subtle: rgba(243, 232, 255, 0.7);
+    --bg-metric: rgba(255, 255, 255, 0.9);
+    --border-color: rgba(226, 224, 240, 0.8);
+    --border-subtle: rgba(233, 213, 255, 0.8);
     
-    --text-main: #18181B;
-    --text-muted: #52525B;
+    --text-main: #111827;
+    --text-muted: #4B5563;
     --text-brand: #6B21A8;
     --text-brand-subtle: #4C1D95;
     
-    --input-bg: #FFFFFF;
+    --input-bg: rgba(255, 255, 255, 0.9);
     --input-text: #000000;
-    --input-border: #A1A1AA;
+    --input-border: #9CA3AF;
     
-    --tab-bg: #F4F4F5;
-    --tab-text: #52525B;
+    --tab-bg: rgba(244, 244, 245, 0.8);
+    --tab-text: #374151;
     --tab-selected-bg: #7C3AED;
     --tab-selected-text: #FFFFFF;
     
     --primary-btn-bg: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
     --primary-btn-text: #FFFFFF;
     
-    --logout-bg: #FEE2E2;
+    --logout-bg: rgba(254, 226, 226, 0.9);
     --logout-text: #991B1B;
     --logout-border: #FCA5A5;
     
-    --success-bg: #ECFDF5;
+    --success-bg: rgba(236, 253, 245, 0.9);
     --success-border: #10B981;
     --success-header: #065F46;
     --success-text: #047857;
     --success-color: #10B981;
     --error-color: #EF4444;
     
-    --notice-bg: #FEF3C7;
+    --notice-bg: rgba(254, 243, 199, 0.9);
     --notice-border: #FCD34D;
     --notice-text: #92400E;
 }
 
-/* 2. Global Dark Theme Overrides (Auto-detect System or Gradio Dark Mode) */
+/* 3. Dark Mode Overrides */
 .dark, @media (prefers-color-scheme: dark) {
     :root {
-        --bg-primary: #09090B;
-        --bg-card: #18181B;
-        --bg-card-subtle: #27272A;
-        --bg-metric: #27272A;
-        --border-color: #27272A;
-        --border-subtle: #3F3F46;
+        --bg-card: rgba(24, 24, 27, 0.82);
+        --bg-card-subtle: rgba(39, 39, 42, 0.75);
+        --bg-metric: rgba(39, 39, 42, 0.85);
+        --border-color: rgba(63, 63, 70, 0.8);
+        --border-subtle: rgba(82, 82, 91, 0.8);
         
         --text-main: #FAFAFA;
-        --text-muted: #A1A1AA;
+        --text-muted: #D1D5DB;
         --text-brand: #C084FC;
         --text-brand-subtle: #DDD6FE;
         
-        --input-bg: #18181B;
+        --input-bg: rgba(24, 24, 27, 0.85);
         --input-text: #FFFFFF;
-        --input-border: #52525B;
+        --input-border: #6B7280;
         
-        --tab-bg: #27272A;
-        --tab-text: #A1A1AA;
+        --tab-bg: rgba(39, 39, 42, 0.8);
+        --tab-text: #9CA3AF;
         --tab-selected-bg: #8B5CF6;
         --tab-selected-text: #FFFFFF;
         
         --primary-btn-bg: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
         --primary-btn-text: #FFFFFF;
         
-        --logout-bg: #450A0A;
+        --logout-bg: rgba(69, 10, 10, 0.85);
         --logout-text: #FCA5A5;
         --logout-border: #7F1D1D;
         
-        --success-bg: #064E3B;
+        --success-bg: rgba(6, 78, 59, 0.85);
         --success-border: #059669;
         --success-header: #A7F3D0;
         --success-text: #6EE7B7;
         
-        --notice-bg: #451A03;
+        --notice-bg: rgba(69, 26, 3, 0.85);
         --notice-border: #78350F;
         --notice-text: #FDE68A;
     }
 }
 
-/* 3. Typography & Form Controls Adaptation */
+/* 4. Typography & Inputs Adaptations */
 .gradio-container p, 
 .gradio-container span, 
 .gradio-container label, 
@@ -225,9 +233,10 @@ input, textarea, select, .gr-input, .gr-select {
     border: 1.5px solid var(--input-border) !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
+    backdrop-filter: blur(8px) !important;
 }
 
-/* 4. Tab Styling */
+/* 5. Tab Styling */
 button[role="tab"] {
     color: var(--tab-text) !important;
     background: var(--tab-bg) !important;
@@ -236,6 +245,7 @@ button[role="tab"] {
     padding: 8px 14px !important;
     margin-right: 6px !important;
     font-weight: 700 !important;
+    backdrop-filter: blur(6px) !important;
 }
 
 button[role="tab"][aria-selected="true"] {
@@ -244,13 +254,15 @@ button[role="tab"][aria-selected="true"] {
     border-color: var(--tab-selected-bg) !important;
 }
 
-/* 5. Custom Card & Container Classes */
+/* 6. Custom Glass Card Container */
 .lavender-card {
     background: var(--bg-card) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
     border-radius: 20px !important;
     padding: 20px !important;
     border: 1px solid var(--border-color) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
 }
 
 .scroll-panel {
@@ -259,9 +271,10 @@ button[role="tab"][aria-selected="true"] {
     padding-right: 4px;
 }
 
-/* 6. Dashboard Banner */
+/* 7. Banner & Metrics */
 .welcome-banner {
-    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.9) 0%, rgba(109, 40, 217, 0.9) 100%);
+    backdrop-filter: blur(8px);
     border-radius: 18px;
     padding: 18px 22px;
     color: #FFFFFF !important;
@@ -270,11 +283,11 @@ button[role="tab"][aria-selected="true"] {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);
 }
 
 .status-tag {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.25);
     display: inline-block;
     padding: 3px 10px;
     border-radius: 20px;
@@ -299,7 +312,7 @@ button[role="tab"][aria-selected="true"] {
 }
 
 .date-badge {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     padding: 8px 16px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.3);
@@ -307,7 +320,6 @@ button[role="tab"][aria-selected="true"] {
     color: #FFFFFF !important;
 }
 
-/* 7. Metrics & Dynamic Badges */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -317,11 +329,12 @@ button[role="tab"][aria-selected="true"] {
 
 .metric-card {
     background: var(--bg-metric);
+    backdrop-filter: blur(8px);
     border-radius: 14px;
     padding: 12px 8px;
     text-align: center;
     border: 1px solid var(--border-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .metric-icon {
@@ -344,6 +357,7 @@ button[role="tab"][aria-selected="true"] {
 
 .eval-badge-success {
     background: var(--success-bg);
+    backdrop-filter: blur(6px);
     border: 1px solid var(--success-border);
     border-radius: 10px;
     padding: 12px;
@@ -352,6 +366,7 @@ button[role="tab"][aria-selected="true"] {
 
 .info-banner {
     background: var(--bg-card-subtle);
+    backdrop-filter: blur(6px);
     border-left: 4px solid var(--tab-selected-bg);
     padding: 10px 14px;
     border-radius: 10px;
@@ -359,6 +374,7 @@ button[role="tab"][aria-selected="true"] {
 
 .notice-box {
     background: var(--notice-bg);
+    backdrop-filter: blur(6px);
     border: 1px solid var(--notice-border);
     border-radius: 12px;
     padding: 10px 14px;
@@ -383,6 +399,7 @@ button.primary-btn {
     cursor: pointer !important;
     margin-top: 10px !important;
     width: 100% !important;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3) !important;
 }
 
 button.logout-btn {
@@ -392,6 +409,7 @@ button.logout-btn {
     font-weight: 800 !important;
     border-radius: 10px !important;
     width: 100% !important;
+    backdrop-filter: blur(6px) !important;
 }
 
 /* 9. Mobile Responsive Layout Rules */
@@ -482,11 +500,10 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                 </div>
                 """)
 
-        # Recommendation Banner on Login View
         gr.HTML("""
         <div class="notice-box">
-            <span style="font-size: 1.1rem;">💡</span>
-            <span><strong>System Display Note:</strong> This interface automatically adjusts colors to fit both <strong>Light</strong> and <strong>Dark Mode</strong> preferences on your device.</span>
+            <span style="font-size: 1.1rem;">🎨</span>
+            <span><strong>Adaptive Visuals Active:</strong> Translucent glass cards automatically maintain contrast in both <strong>Light Mode</strong> and <strong>Dark Mode</strong> while preserving the fixed background wallpaper.</span>
         </div>
         """)
 
@@ -517,7 +534,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
             with gr.Column(scale=1):
                 gr.HTML("""
-                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 16px;">
+                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 16px; backdrop-filter: blur(8px);">
                     <h3 style="color: var(--text-brand); margin-top:0; font-size: 1rem; font-weight: 800;">💡 Clinical Triage Capabilities</h3>
                     <ul style="color: var(--text-main); font-size: 0.82rem; line-height: 1.6; padding-left: 16px; margin-bottom: 0;">
                         <li><strong>Cardiovascular Evaluation:</strong> 13 parameters.</li>
@@ -542,11 +559,11 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             
             gr.HTML("""
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px;">
+                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px; backdrop-filter: blur(8px);">
                     <div style="font-size: 0.7rem; color: var(--text-brand); font-weight: 800;">● STATUS</div>
                     <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">ML Pipeline Active</div>
                 </div>
-                <div style="background: var(--tab-bg); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px;">
+                <div style="background: var(--tab-bg); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px; backdrop-filter: blur(8px);">
                     <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800;">💡 Quick Guide</div>
                     <div style="font-size: 0.75rem; color: var(--text-main); margin-top: 4px;">Run predictions under tabs to store patient history dynamically.</div>
                 </div>
