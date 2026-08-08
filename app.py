@@ -7,21 +7,26 @@ import gradio as gr
 
 def register_user(username, password, confirm_password):
     if not username or not password:
-        return "<p style='color: var(--error-color);'>Please fill in all fields.</p>"
+        return "<p style='color: #EF4444; font-weight: bold;'>Please fill in all fields.</p>"
     if password != confirm_password:
-        return "<p style='color: var(--error-color);'>Passwords do not match.</p>"
+        return "<p style='color: #EF4444; font-weight: bold;'>Passwords do not match.</p>"
     if len(password) < 8:
-        return "<p style='color: var(--error-color);'>Password must be at least 8 characters.</p>"
-    return "<p style='color: var(--success-color);'>Account registered successfully! Please sign in.</p>"
+        return "<p style='color: #EF4444; font-weight: bold;'>Password must be at least 8 characters.</p>"
+    return "<p style='color: #10B981; font-weight: bold;'>Account registered successfully! Please sign in.</p>"
 
 def handle_user_login(username, password):
     if username and password:
         welcome_html = f"""
         <div class='welcome-banner'>
-            <div>
-                <span class='status-tag'>CLINICAL WORKSTATION ONLINE</span>
-                <h2 class='welcome-title'>Welcome, {username}</h2>
-                <p class='welcome-sub'>Select a diagnostic module below to begin patient assessment.</p>
+            <div style='display: flex; align-items: center; gap: 12px;'>
+                <div class='img-block-wrapper-small'>
+                    <img src='https://img.icons8.com/color/96/doctor-male.png' alt='Doctor Avatar' class='block-img-contained' />
+                </div>
+                <div>
+                    <span class='status-tag'>CLINICAL WORKSTATION ONLINE</span>
+                    <h2 class='welcome-title'>Welcome, Dr. {username}</h2>
+                    <p class='welcome-sub'>Select a diagnostic module below to begin patient assessment.</p>
+                </div>
             </div>
             <div class='date-badge'>
                 <strong>Date:</strong> {datetime.date.today().strftime('%B %d, %Y')}
@@ -30,11 +35,31 @@ def handle_user_login(username, password):
         """
         metrics_html = """
         <div class='metrics-grid'>
-            <div class='metric-card'><div class='metric-icon'>❤️</div><div class='metric-title'>Cardio Risk</div><div class='metric-val'>Normal</div></div>
-            <div class='metric-card'><div class='metric-icon'>🩸</div><div class='metric-title'>Glycemic</div><div class='metric-val'>Optimal</div></div>
-            <div class='metric-card'><div class='metric-icon'>🫘</div><div class='metric-title'>Renal Panel</div><div class='metric-val'>Stage 1</div></div>
-            <div class='metric-card'><div class='metric-icon'>🫀</div><div class='metric-title'>Hepatic</div><div class='metric-val'>Normal</div></div>
-            <div class='metric-card full-width-mobile'><div class='metric-icon'>⚖️</div><div class='metric-title'>BMI Class</div><div class='metric-val'>22.8</div></div>
+            <div class='metric-card'>
+                <div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/heart-health.png' alt='Cardio' class='block-img-contained'/></div>
+                <div class='metric-title'>Cardio Risk</div>
+                <div class='metric-val'>Normal</div>
+            </div>
+            <div class='metric-card'>
+                <div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/blood-sample.png' alt='Glycemic' class='block-img-contained'/></div>
+                <div class='metric-title'>Glycemic</div>
+                <div class='metric-val'>Optimal</div>
+            </div>
+            <div class='metric-card'>
+                <div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/kidney.png' alt='Renal' class='block-img-contained'/></div>
+                <div class='metric-title'>Renal Panel</div>
+                <div class='metric-val'>Stage 1</div>
+            </div>
+            <div class='metric-card'>
+                <div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/liver.png' alt='Hepatic' class='block-img-contained'/></div>
+                <div class='metric-title'>Hepatic</div>
+                <div class='metric-val'>Normal</div>
+            </div>
+            <div class='metric-card full-width-mobile'>
+                <div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/scale.png' alt='BMI' class='block-img-contained'/></div>
+                <div class='metric-title'>BMI Class</div>
+                <div class='metric-val'>22.8</div>
+            </div>
         </div>
         """
         return (
@@ -47,7 +72,7 @@ def handle_user_login(username, password):
             welcome_html,              # welcome_banner
             metrics_html               # metrics_banner
         )
-    return (gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "<p style='color: var(--error-color);'>Invalid credentials</p>", "", None, "", "")
+    return (gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "<p style='color: #EF4444; font-weight: bold;'>Invalid credentials</p>", "", None, "", "")
 
 def handle_admin_login(admin_key):
     if admin_key == "admin123":
@@ -62,7 +87,7 @@ def handle_admin_login(admin_key):
             "",
             get_all_users_df()
         )
-    return (gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "<p style='color: var(--error-color);'>Invalid Admin Key</p>", "", None, "", "", None)
+    return (gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), "<p style='color: #EF4444; font-weight: bold;'>Invalid Admin Key</p>", "", None, "", "", None)
 
 def handle_logout():
     return (
@@ -93,40 +118,47 @@ def get_all_users_df():
 
 def delete_user_by_username(username):
     if username:
-        return f"<p style='color: var(--success-color);'>User '{username}' and associated logs deleted successfully.</p>"
-    return "<p style='color: var(--error-color);'>Please specify a username.</p>"
+        return f"<p style='color: #10B981; font-weight: bold;'>User '{username}' and associated logs deleted successfully.</p>"
+    return "<p style='color: #EF4444; font-weight: bold;'>Please specify a username.</p>"
 
-def mock_predict(module_name):
+def mock_predict(module_name, img_url):
     result_html = f"""
     <div class='eval-badge-success'>
-        <h4 style='color: var(--success-header); margin: 0;'>✅ {module_name} Evaluation Complete</h4>
-        <p style='color: var(--success-text); margin: 4px 0 0 0; font-size: 0.9rem;'>Risk Level: <strong>Low</strong> | Confidence Score: <strong>96.4%</strong></p>
+        <div style='display: flex; align-items: center; gap: 12px;'>
+            <div class='img-block-wrapper-small'>
+                <img src='{img_url}' alt='{module_name}' class='block-img-contained' />
+            </div>
+            <div>
+                <h4 style='color: #065F46 !important; margin: 0; font-size: 1.1rem;'>✅ {module_name} Evaluation Complete</h4>
+                <p style='color: #047857 !important; margin: 4px 0 0 0; font-size: 0.9rem;'>Risk Level: <strong>Low</strong> | Confidence Score: <strong>96.4%</strong></p>
+            </div>
+        </div>
     </div>
     """
     metrics_html = """
     <div class='metrics-grid'>
-        <div class='metric-card'><div class='metric-icon'>❤️</div><div class='metric-title'>Cardio Risk</div><div class='metric-val'>Updated</div></div>
-        <div class='metric-card'><div class='metric-icon'>🩸</div><div class='metric-title'>Glycemic</div><div class='metric-val'>Optimal</div></div>
-        <div class='metric-card'><div class='metric-icon'>🫘</div><div class='metric-title'>Renal Panel</div><div class='metric-val'>Stage 1</div></div>
-        <div class='metric-card'><div class='metric-icon'>🫀</div><div class='metric-title'>Hepatic</div><div class='metric-val'>Normal</div></div>
-        <div class='metric-card full-width-mobile'><div class='metric-icon'>⚖️</div><div class='metric-title'>BMI Class</div><div class='metric-val'>22.8</div></div>
+        <div class='metric-card'><div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/heart-health.png' class='block-img-contained'/></div><div class='metric-title'>Cardio Risk</div><div class='metric-val'>Updated</div></div>
+        <div class='metric-card'><div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/blood-sample.png' class='block-img-contained'/></div><div class='metric-title'>Glycemic</div><div class='metric-val'>Optimal</div></div>
+        <div class='metric-card'><div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/kidney.png' class='block-img-contained'/></div><div class='metric-title'>Renal Panel</div><div class='metric-val'>Stage 1</div></div>
+        <div class='metric-card'><div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/liver.png' class='block-img-contained'/></div><div class='metric-title'>Hepatic</div><div class='metric-val'>Normal</div></div>
+        <div class='metric-card full-width-mobile'><div class='img-block-wrapper-mini'><img src='https://img.icons8.com/color/96/scale.png' class='block-img-contained'/></div><div class='metric-title'>BMI Class</div><div class='metric-val'>22.8</div></div>
     </div>
     """
     return result_html, None, get_user_history_df(), metrics_html
 
-def predict_heart(*args): return mock_predict("Cardiovascular")
-def predict_diabetes(*args): return mock_predict("Diabetes")
-def predict_kidney(*args): return mock_predict("Kidney Function")
-def predict_liver(*args): return mock_predict("Liver Function")
-def predict_obesity(*args): return mock_predict("Mass & Lifestyle")
+def predict_heart(*args): return mock_predict("Cardiovascular", "https://img.icons8.com/color/96/heart-health.png")
+def predict_diabetes(*args): return mock_predict("Diabetes", "https://img.icons8.com/color/96/blood-sample.png")
+def predict_kidney(*args): return mock_predict("Kidney Function", "https://img.icons8.com/color/96/kidney.png")
+def predict_liver(*args): return mock_predict("Liver Function", "https://img.icons8.com/color/96/liver.png")
+def predict_obesity(*args): return mock_predict("Mass & Lifestyle", "https://img.icons8.com/color/96/scale.png")
 
 
-# --- DUAL LIGHT / DARK MODE CSS SYSTEM WITH BACKGROUND IMAGE ---
+# --- MODE-PROOF FIXED COLOR SYSTEM ---
 
 css = """
-/* 1. Global Background Image on Main Wrapper */
+/* 1. Global App Container Background */
 .gradio-container {
-    background-image: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
+    background-image: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.6)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
@@ -134,89 +166,7 @@ css = """
     min-height: 100vh !important;
 }
 
-/* 2. Light Mode Glassmorphism Custom Variables */
-:root {
-    --bg-card: rgba(255, 255, 255, 0.85);
-    --bg-card-subtle: rgba(243, 232, 255, 0.75);
-    --bg-metric: rgba(255, 255, 255, 0.95);
-    --border-color: rgba(226, 224, 240, 0.85);
-    --border-subtle: rgba(233, 213, 255, 0.85);
-    
-    --text-main: #111827;
-    --text-muted: #4B5563;
-    --text-brand: #6B21A8;
-    --text-brand-subtle: #4C1D95;
-    
-    --input-bg: #FFFFFF;
-    --input-text: #111827;
-    --input-border: #9CA3AF;
-    
-    --tab-bg: rgba(244, 244, 245, 0.85);
-    --tab-text: #374151;
-    --tab-selected-bg: #7C3AED;
-    --tab-selected-text: #FFFFFF;
-    
-    --primary-btn-bg: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
-    --primary-btn-text: #FFFFFF;
-    
-    --logout-bg: rgba(254, 226, 226, 0.9);
-    --logout-text: #991B1B;
-    --logout-border: #FCA5A5;
-    
-    --success-bg: rgba(236, 253, 245, 0.95);
-    --success-border: #10B981;
-    --success-header: #065F46;
-    --success-text: #047857;
-    --success-color: #10B981;
-    --error-color: #EF4444;
-    
-    --notice-bg: rgba(254, 243, 199, 0.95);
-    --notice-border: #FCD34D;
-    --notice-text: #92400E;
-}
-
-/* 3. Dark Mode Overrides */
-.dark, [data-theme="dark"], @media (prefers-color-scheme: dark) {
-    :root {
-        --bg-card: rgba(24, 24, 27, 0.88);
-        --bg-card-subtle: rgba(39, 39, 42, 0.85);
-        --bg-metric: rgba(39, 39, 42, 0.9);
-        --border-color: rgba(63, 63, 70, 0.85);
-        --border-subtle: rgba(82, 82, 91, 0.85);
-        
-        --text-main: #FAFAFA;
-        --text-muted: #D1D5DB;
-        --text-brand: #C084FC;
-        --text-brand-subtle: #DDD6FE;
-        
-        --input-bg: #18181B;
-        --input-text: #FAFAFA;
-        --input-border: #6B7280;
-        
-        --tab-bg: rgba(39, 39, 42, 0.85);
-        --tab-text: #D1D5DB;
-        --tab-selected-bg: #8B5CF6;
-        --tab-selected-text: #FFFFFF;
-        
-        --primary-btn-bg: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
-        --primary-btn-text: #FFFFFF;
-        
-        --logout-bg: rgba(69, 10, 10, 0.9);
-        --logout-text: #FCA5A5;
-        --logout-border: #7F1D1D;
-        
-        --success-bg: rgba(6, 78, 59, 0.9);
-        --success-border: #059669;
-        --success-header: #A7F3D0;
-        --success-text: #6EE7B7;
-        
-        --notice-bg: rgba(69, 26, 3, 0.9);
-        --notice-border: #78350F;
-        --notice-text: #FDE68A;
-    }
-}
-
-/* 4. Typography & Inputs Adaptations */
+/* 2. Absolute Text Legibility Rules Overriding Light/Dark Modes */
 .gradio-container p, 
 .gradio-container span, 
 .gradio-container label, 
@@ -224,266 +174,200 @@ css = """
 .gradio-container h1, 
 .gradio-container h2, 
 .gradio-container h3,
-.gradio-container h4 {
-    color: var(--text-main) !important;
+.gradio-container h4,
+.gradio-container th,
+.gradio-container td {
+    color: #F3F4F6 !important; /* Fixed Crisp High-Contrast Light Text */
 }
 
-/* Fix input, dropdown, and textarea visibility across themes */
-input, textarea, select, .gr-input, .gr-select, 
+/* 3. Fixed Style Input Controls */
+input, textarea, select, .gr-input, .gr-select,
 .gradio-container input, .gradio-container select, .gradio-container textarea {
-    color: var(--input-text) !important;
-    background-color: var(--input-bg) !important;
-    border: 1.5px solid var(--input-border) !important;
+    color: #000000 !important; /* Always Pure Black Text inside inputs */
+    background-color: #FFFFFF !important; /* Always Crisp White Input Box */
+    border: 2px solid #9CA3AF !important;
     border-radius: 8px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
 }
 
-/* 5. Tab Styling */
+/* 4. Isolated Card Containers */
+.lavender-card {
+    background: rgba(24, 24, 27, 0.92) !important; /* Solid dark backing preventing theme blend */
+    backdrop-filter: blur(12px) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 5. Fixed Block & Column Content Cards */
+.content-block-card {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+}
+
+/* 6. Isolated Image Containers (Prevents Inversion/Filter Effects) */
+.img-block-wrapper-large {
+    background-color: #FFFFFF !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border: 1px solid #E2E8F0 !important;
+    margin-bottom: 12px !important;
+}
+
+.img-block-wrapper-medium {
+    background-color: #FFFFFF !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border: 1px solid #E2E8F0 !important;
+    width: 64px !important;
+    height: 64px !important;
+}
+
+.img-block-wrapper-small {
+    background-color: #FFFFFF !important;
+    border-radius: 8px !important;
+    padding: 6px !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 48px !important;
+    height: 48px !important;
+}
+
+.img-block-wrapper-mini {
+    background-color: #FFFFFF !important;
+    border-radius: 6px !important;
+    padding: 4px !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    margin-bottom: 6px !important;
+}
+
+.block-img-contained {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+/* 7. Tabs Customization */
 button[role="tab"] {
-    color: var(--tab-text) !important;
-    background: var(--tab-bg) !important;
-    border: 1px solid var(--border-subtle) !important;
+    color: #D1D5DB !important;
+    background: #334155 !important;
+    border: 1px solid #475569 !important;
     border-radius: 10px !important;
     padding: 8px 14px !important;
     margin-right: 6px !important;
     font-weight: 700 !important;
-    backdrop-filter: blur(6px) !important;
 }
 
 button[role="tab"][aria-selected="true"] {
-    color: var(--tab-selected-text) !important;
-    background-color: var(--tab-selected-bg) !important;
-    border-color: var(--tab-selected-bg) !important;
+    color: #FFFFFF !important;
+    background-color: #7C3AED !important;
+    border-color: #7C3AED !important;
 }
 
-/* 6. Custom Glass Card Container */
-.lavender-card {
-    background: var(--bg-card) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border-radius: 20px !important;
-    padding: 20px !important;
-    border: 1px solid var(--border-color) !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
-}
-
-.scroll-panel {
-    max-height: 520px;
-    overflow-y: auto !important;
-    padding-right: 4px;
-}
-
-/* 7. Banner & Metrics */
+/* 8. Specific Dashboard Banners */
 .welcome-banner {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(109, 40, 217, 0.95) 100%);
-    backdrop-filter: blur(8px);
-    border-radius: 18px;
-    padding: 18px 22px;
-    color: #FFFFFF !important;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);
+    background: linear-gradient(135deg, #6D28D9 0%, #4C1D95 100%) !important;
+    border-radius: 18px !important;
+    padding: 18px 22px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    border: 1px solid #8B5CF6 !important;
 }
 
-.status-tag {
-    background: rgba(255,255,255,0.25);
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.75rem;
-    margin-bottom: 6px;
-    color: #FFFFFF !important;
-}
+.welcome-title { margin: 0; font-size: 1.4rem; font-weight: 800; color: #FFFFFF !important; }
+.welcome-sub { margin: 2px 0 0 0; color: #DDD6FE !important; font-size: 0.85rem; }
+.status-tag { background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; color: #FFFFFF !important; }
+.date-badge { background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); color: #FFFFFF !important; }
 
-.welcome-title {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #FFFFFF !important;
-}
-
-.welcome-sub {
-    margin: 2px 0 0 0;
-    color: #F3E8FF !important;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.date-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 8px 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.3);
-    text-align: right;
-    color: #FFFFFF !important;
-}
-
+/* 9. Metrics Grid */
 .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-top: 14px;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
 }
 
 .metric-card {
-    background: var(--bg-metric);
-    backdrop-filter: blur(8px);
-    border-radius: 14px;
-    padding: 12px 8px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background: #1E293B !important;
+    border-radius: 14px !important;
+    padding: 12px 8px !important;
+    text-align: center !important;
+    border: 1px solid #334155 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
 }
 
-.metric-icon {
-    font-size: 1.2rem;
-}
-
-.metric-title {
-    color: var(--text-muted) !important;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.metric-val {
-    color: var(--text-main) !important;
-    font-size: 1.3rem;
-    font-weight: 900;
-    margin-top: 2px;
-}
+.metric-title { color: #94A3B8 !important; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.metric-val { color: #F8FAFC !important; font-size: 1.2rem; font-weight: 900; margin-top: 2px; }
 
 .eval-badge-success {
-    background: var(--success-bg);
-    backdrop-filter: blur(6px);
-    border: 1px solid var(--success-border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-top: 10px;
-}
-
-.info-banner {
-    background: var(--bg-card-subtle);
-    backdrop-filter: blur(6px);
-    border-left: 4px solid var(--tab-selected-bg);
-    padding: 10px 14px;
-    border-radius: 10px;
+    background: #D1FAE5 !important;
+    border: 1px solid #10B981 !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    margin-top: 10px !important;
 }
 
 .notice-box {
-    background: var(--notice-bg);
-    backdrop-filter: blur(6px);
-    border: 1px solid var(--notice-border);
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-top: 10px;
-    color: var(--notice-text) !important;
-    font-size: 0.83rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    background: #FEF3C7 !important;
+    border: 1px solid #FCD34D !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    margin-top: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
 }
 
-.notice-box span {
-    color: var(--notice-text) !important;
+.notice-box p, .notice-box span, .notice-box strong {
+    color: #78350F !important;
 }
 
-/* 8. Button Styling */
+/* 10. Buttons */
 button.primary-btn {
-    background: var(--primary-btn-bg) !important;
-    color: var(--primary-btn-text) !important;
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important;
+    color: #FFFFFF !important;
     border-radius: 12px !important;
     font-weight: 800 !important;
-    font-size: 0.95rem !important;
     padding: 10px !important;
     border: none !important;
-    cursor: pointer !important;
     margin-top: 10px !important;
     width: 100% !important;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3) !important;
 }
 
 button.logout-btn {
-    background: var(--logout-bg) !important;
-    color: var(--logout-text) !important;
-    border: 1px solid var(--logout-border) !important;
+    background: #7F1D1D !important;
+    color: #FECACA !important;
+    border: 1px solid #991B1B !important;
     font-weight: 800 !important;
     border-radius: 10px !important;
     width: 100% !important;
-    backdrop-filter: blur(6px) !important;
 }
 
-/* 9. Mobile Responsive Layout Rules */
+/* 11. Mobile Adjustments */
 @media (max-width: 768px) {
-    .responsive-auth-container {
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-
-    .responsive-auth-container > div {
-        width: 100% !important;
-        min-width: 100% !important;
-    }
-
-    .lavender-card {
-        padding: 14px !important;
-        border-radius: 16px !important;
-    }
-
-    input, textarea, select {
-        font-size: 16px !important;
-        padding: 10px !important;
-    }
-
-    .welcome-banner {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 14px 16px !important;
-        border-radius: 14px !important;
-    }
-
-    .welcome-title {
-        font-size: 1.15rem !important;
-    }
-
-    .welcome-sub {
-        font-size: 0.78rem !important;
-    }
-
-    .date-badge {
-        width: 100% !important;
-        text-align: left !important;
-        padding: 6px 12px !important;
-        margin-top: 4px !important;
-    }
-
-    .metrics-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-    }
-
-    .metric-card {
-        padding: 10px 6px !important;
-    }
-
-    .metric-val {
-        font-size: 1.1rem !important;
-    }
-
-    .full-width-mobile {
-        grid-column: span 2 !important;
-    }
-
-    .horizontal-tabs-container button[role="tab"] {
-        font-size: 0.75rem !important;
-        padding: 6px 10px !important;
-        margin-bottom: 4px !important;
-    }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .full-width-mobile { grid-column: span 2 !important; }
 }
 """
 
@@ -492,31 +376,48 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
 
     # ------------------ AUTHENTICATION PORTAL ------------------
     with gr.Column(visible=True, elem_classes=["lavender-card"]) as auth_view:
-        with gr.Row(elem_classes=["responsive-auth-container"]):
-            with gr.Column(scale=1):
-                gr.Markdown("""
-                # 🏥 **Sick Sense Clinical AI**
-                ### *Mobile & Desktop Diagnostic Dashboard*
-                """)
-            with gr.Column(scale=1):
+        with gr.Row():
+            with gr.Column(scale=1, elem_classes=["content-block-card"]):
                 gr.HTML("""
-                <div class="info-banner">
-                    <span style="color: var(--text-brand); font-weight: 800; font-size: 0.8rem;">● SYSTEM ONLINE</span><br/>
-                    <span style="color: var(--text-brand-subtle); font-size: 0.8rem; font-weight: 600;">5 ML Diagnostic Models Active</span>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="img-block-wrapper-large" style="width: 80px; height: 80px; margin-bottom: 0;">
+                        <img src="https://img.icons8.com/color/96/hospital-2.png" alt="Hospital Logo" class="block-img-contained" />
+                    </div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 1.6rem; color: #F8FAFC !important;">🏥 Sick Sense Clinical AI</h1>
+                        <h3 style="margin: 4px 0 0 0; font-size: 1rem; color: #CBD5E1 !important;">Mobile & Desktop Diagnostic Dashboard</h3>
+                    </div>
+                </div>
+                """)
+
+            with gr.Column(scale=1, elem_classes=["content-block-card"]):
+                gr.HTML("""
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="img-block-wrapper-medium">
+                        <img src="https://img.icons8.com/color/96/artificial-intelligence.png" alt="AI Status" class="block-img-contained" />
+                    </div>
+                    <div>
+                        <span style="color: #34D399 !important; font-weight: 800; font-size: 0.85rem;">● SYSTEM ONLINE</span><br/>
+                        <span style="color: #E2E8F0 !important; font-size: 0.85rem; font-weight: 600;">5 Active ML Diagnostic Modules</span>
+                    </div>
                 </div>
                 """)
 
         gr.HTML("""
         <div class="notice-box">
-            <span style="font-size: 1.1rem;">🎨</span>
-            <span><strong>Adaptive Visuals Active:</strong> Translucent glass cards automatically maintain contrast in both <strong>Light Mode</strong> and <strong>Dark Mode</strong> while preserving the fixed background wallpaper.</span>
+            <div class="img-block-wrapper-small">
+                <img src="https://img.icons8.com/color/96/sun-dark-mode.png" alt="Theme Isolation" class="block-img-contained" />
+            </div>
+            <div>
+                <strong>Mode-Immune Architecture Active:</strong> All UI blocks, text contrast ratios, and image containers are locked to explicit values, preventing external browser Light/Dark modes from breaking visibility.
+            </div>
         </div>
         """)
 
         gr.Markdown("---")
 
-        with gr.Row(elem_classes=["responsive-auth-container"]):
-            with gr.Column(scale=1.2):
+        with gr.Row():
+            with gr.Column(scale=1.2, elem_classes=["content-block-card"]):
                 with gr.Tabs():
                     with gr.Tab("🔑 Sign In"):
                         username_input = gr.Textbox(label="Username", placeholder="Enter username")
@@ -529,7 +430,7 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         new_password = gr.Textbox(label="New Password", type="password", placeholder="At least 8 characters")
                         confirm_password = gr.Textbox(label="Confirm Password", type="password", placeholder="Re-enter password")
                         
-                        gr.HTML("<div style='font-size: 0.78rem; color: var(--text-brand); margin-bottom: 8px;'>🔒 <strong>Requirement:</strong> Minimum 8 characters.</div>")
+                        gr.HTML("<div style='font-size: 0.8rem; color: #C084FC; margin-bottom: 8px;'>🔒 <strong>Requirement:</strong> Minimum 8 characters.</div>")
                         signup_btn = gr.Button("Register Account", elem_classes=["primary-btn"])
                         signup_msg = gr.HTML("")
 
@@ -538,40 +439,41 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         admin_login_btn = gr.Button("Access Admin Panel", elem_classes=["primary-btn"])
                         admin_msg = gr.HTML("")
 
-            with gr.Column(scale=1):
+            with gr.Column(scale=1, elem_classes=["content-block-card"]):
                 gr.HTML("""
-                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 16px; backdrop-filter: blur(8px);">
-                    <h3 style="color: var(--text-brand); margin-top:0; font-size: 1rem; font-weight: 800;">💡 Clinical Triage Capabilities</h3>
-                    <ul style="color: var(--text-main); font-size: 0.82rem; line-height: 1.6; padding-left: 16px; margin-bottom: 0;">
-                        <li><strong>Cardiovascular Evaluation:</strong> 13 parameters.</li>
+                <div>
+                    <div class="img-block-wrapper-large">
+                        <img src="https://img.icons8.com/color/96/medical-history.png" alt="Clinical Triage" class="block-img-contained" />
+                    </div>
+                    <h3 style="color: #A855F7 !important; margin-top:0; font-size: 1.1rem; font-weight: 800;">💡 Clinical Triage Capabilities</h3>
+                    <ul style="color: #F1F5F9 !important; font-size: 0.85rem; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+                        <li><strong>Cardiovascular Evaluation:</strong> 13 clinical parameters.</li>
                         <li><strong>Glycemic Analysis:</strong> HbA1c & Fasting Glucose.</li>
-                        <li><strong>Renal & Hepatic Panels:</strong> Enzymes & Function.</li>
-                        <li><strong>Encrypted History:</strong> Automatic SQLite logging.</li>
+                        <li><strong>Renal & Hepatic Panels:</strong> Enzyme & function metrics.</li>
+                        <li><strong>Encrypted History:</strong> Dynamic session record tracking.</li>
                     </ul>
                 </div>
                 """)
 
     # ------------------ MAIN CLINICAL DASHBOARD ------------------
     with gr.Row(visible=False, elem_classes=["lavender-card"]) as user_dashboard_view:
-        with gr.Column(scale=1, min_width=220):
+        with gr.Column(scale=1, min_width=220, elem_classes=["content-block-card"]):
             gr.HTML("""
             <div style="text-align: center; padding-bottom: 6px;">
-                <div style="font-size: 1.8rem;">🧪</div>
-                <div style="font-weight: 900; color: var(--text-main); font-size: 1.1rem;">Sick Sense</div>
-                <div style="color: var(--text-brand); font-size: 0.7rem; font-weight: 700;">CLINICAL WORKSTATION</div>
+                <div class="img-block-wrapper-large" style="margin: 0 auto 8px auto; width: 72px; height: 72px;">
+                    <img src="https://img.icons8.com/color/96/caduceus.png" alt="Sick Sense Logo" class="block-img-contained" />
+                </div>
+                <div style="font-weight: 900; color: #FFFFFF !important; font-size: 1.2rem;">Sick Sense</div>
+                <div style="color: #C084FC !important; font-size: 0.75rem; font-weight: 700;">CLINICAL WORKSTATION</div>
             </div>
             """)
             gr.Markdown("---")
             
             gr.HTML("""
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px; backdrop-filter: blur(8px);">
-                    <div style="font-size: 0.7rem; color: var(--text-brand); font-weight: 800;">● STATUS</div>
-                    <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">ML Pipeline Active</div>
-                </div>
-                <div style="background: var(--tab-bg); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 10px; backdrop-filter: blur(8px);">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800;">💡 Quick Guide</div>
-                    <div style="font-size: 0.75rem; color: var(--text-main); margin-top: 4px;">Run predictions under tabs to store patient history dynamically.</div>
+                <div style="background: #0F172A; border: 1px solid #334155; padding: 10px; border-radius: 10px;">
+                    <div style="font-size: 0.7rem; color: #34D399; font-weight: 800;">● STATUS</div>
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #F8FAFC !important;">ML Pipeline Active</div>
                 </div>
             </div>
             """)
@@ -585,10 +487,17 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
             
             gr.Markdown("---")
 
-            with gr.Tabs(elem_classes=["horizontal-tabs-container"]):
+            with gr.Tabs():
                 with gr.Tab("❤️ Heart Diagnostic"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Cardiovascular Input Parameters")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/heart-health.png" alt="Cardio" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Cardiovascular Input Parameters</h4>
+                        </div>
+                        """)
                         with gr.Row():
                             age = gr.Number(label="Age", value=45)
                             sex = gr.Dropdown(["0", "1"], value="1", label="Sex (1=M, 0=F)")
@@ -612,8 +521,15 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         heart_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🩸 Diabetes Diagnostic"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Glycemic Input Parameters")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/blood-sample.png" alt="Diabetes" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Glycemic Input Parameters</h4>
+                        </div>
+                        """)
                         with gr.Row():
                             gender = gr.Dropdown(["Female", "Male", "Other"], value="Male", label="Gender")
                             d_age = gr.Number(label="Age", value=40)
@@ -631,8 +547,15 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         diabetes_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🫘 Kidney Function"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Renal Input Parameters")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/kidney.png" alt="Kidney" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Renal Input Parameters</h4>
+                        </div>
+                        """)
                         with gr.Row():
                             k_age = gr.Number(label="Age", value=48)
                             k_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
@@ -652,8 +575,15 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         kidney_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("🫀 Liver Function"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Hepatic Input Parameters")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/liver.png" alt="Liver" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Hepatic Input Parameters</h4>
+                        </div>
+                        """)
                         with gr.Row():
                             l_age = gr.Number(label="Age", value=55)
                             l_gender = gr.Dropdown(["Male", "Female"], value="Male", label="Gender")
@@ -673,8 +603,15 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         liver_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("⚖️ Mass & Lifestyle"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Anthropometric Data")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/scale.png" alt="Mass" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Anthropometric Data</h4>
+                        </div>
+                        """)
                         with gr.Row():
                             o_gender = gr.Dropdown(["Female", "Male"], value="Male", label="Gender")
                             o_age = gr.Number(label="Age", value=22)
@@ -701,18 +638,32 @@ with gr.Blocks(css=css, title="Sick Sense Clinical Dashboard") as demo:
                         obesity_pdf_download = gr.File(label="📄 Download Diagnostic PDF Report", visible=True)
 
                 with gr.Tab("📜 Medical History Log"):
-                    with gr.Column(elem_classes=["scroll-panel"]):
-                        gr.Markdown("#### Patient Log History")
+                    with gr.Column(elem_classes=["content-block-card"]):
+                        gr.HTML("""
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div class="img-block-wrapper-small">
+                                <img src="https://img.icons8.com/color/96/overview-pages-2.png" alt="Logs" class="block-img-contained" />
+                            </div>
+                            <h4 style="margin: 0;">Patient Log History</h4>
+                        </div>
+                        """)
                         history_table = gr.Dataframe(value=pd.DataFrame(columns=["Test Module", "Outcome Result", "Confidence", "Date & Time"]), interactive=False)
                         refresh_history_btn = gr.Button("🔄 Refresh Saved Records", elem_classes=["primary-btn"])
 
     # ------------------ ADMIN PANEL PAGE ------------------
     with gr.Column(visible=False, elem_classes=["lavender-card"]) as admin_dashboard_view:
         with gr.Row():
-            gr.Markdown("### 🛡️ Administrative Management")
+            gr.HTML("""
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="img-block-wrapper-small">
+                    <img src="https://img.icons8.com/color/96/administrator-male.png" alt="Admin" class="block-img-contained" />
+                </div>
+                <h3 style="margin: 0;">🛡️ Administrative Management</h3>
+            </div>
+            """)
             admin_logout_btn = gr.Button("Exit Panel", elem_classes=["logout-btn"], scale=0, min_width=100)
 
-        with gr.Column(elem_classes=["scroll-panel"]):
+        with gr.Column(elem_classes=["content-block-card"]):
             user_table = gr.Dataframe(value=pd.DataFrame(columns=["User ID", "Registered Username"]), interactive=False)
             refresh_btn = gr.Button("🔄 Refresh Database Table", elem_classes=["primary-btn"])
 
