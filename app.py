@@ -20,7 +20,7 @@ def handle_user_login(username, password):
         <div class='welcome-banner'>
             <div>
                 <span class='status-tag'>CLINICAL WORKSTATION ONLINE</span>
-                <h2 class='welcome-title'>Welcome, Dr. {username}</h2>
+                <h2 class='welcome-title'>Welcome, {username}</h2>
                 <p class='welcome-sub'>Select a diagnostic module below to begin patient assessment.</p>
             </div>
             <div class='date-badge'>
@@ -136,22 +136,22 @@ css = """
 
 /* 2. Light Mode Glassmorphism Custom Variables */
 :root {
-    --bg-card: rgba(255, 255, 255, 0.82);
-    --bg-card-subtle: rgba(243, 232, 255, 0.7);
-    --bg-metric: rgba(255, 255, 255, 0.9);
-    --border-color: rgba(226, 224, 240, 0.8);
-    --border-subtle: rgba(233, 213, 255, 0.8);
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-subtle: rgba(243, 232, 255, 0.75);
+    --bg-metric: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(226, 224, 240, 0.85);
+    --border-subtle: rgba(233, 213, 255, 0.85);
     
     --text-main: #111827;
     --text-muted: #4B5563;
     --text-brand: #6B21A8;
     --text-brand-subtle: #4C1D95;
     
-    --input-bg: rgba(255, 255, 255, 0.9);
-    --input-text: #000000;
+    --input-bg: #FFFFFF;
+    --input-text: #111827;
     --input-border: #9CA3AF;
     
-    --tab-bg: rgba(244, 244, 245, 0.8);
+    --tab-bg: rgba(244, 244, 245, 0.85);
     --tab-text: #374151;
     --tab-selected-bg: #7C3AED;
     --tab-selected-text: #FFFFFF;
@@ -163,54 +163,54 @@ css = """
     --logout-text: #991B1B;
     --logout-border: #FCA5A5;
     
-    --success-bg: rgba(236, 253, 245, 0.9);
+    --success-bg: rgba(236, 253, 245, 0.95);
     --success-border: #10B981;
     --success-header: #065F46;
     --success-text: #047857;
     --success-color: #10B981;
     --error-color: #EF4444;
     
-    --notice-bg: rgba(254, 243, 199, 0.9);
+    --notice-bg: rgba(254, 243, 199, 0.95);
     --notice-border: #FCD34D;
     --notice-text: #92400E;
 }
 
 /* 3. Dark Mode Overrides */
-.dark, @media (prefers-color-scheme: dark) {
+.dark, [data-theme="dark"], @media (prefers-color-scheme: dark) {
     :root {
-        --bg-card: rgba(24, 24, 27, 0.82);
-        --bg-card-subtle: rgba(39, 39, 42, 0.75);
-        --bg-metric: rgba(39, 39, 42, 0.85);
-        --border-color: rgba(63, 63, 70, 0.8);
-        --border-subtle: rgba(82, 82, 91, 0.8);
+        --bg-card: rgba(24, 24, 27, 0.88);
+        --bg-card-subtle: rgba(39, 39, 42, 0.85);
+        --bg-metric: rgba(39, 39, 42, 0.9);
+        --border-color: rgba(63, 63, 70, 0.85);
+        --border-subtle: rgba(82, 82, 91, 0.85);
         
         --text-main: #FAFAFA;
         --text-muted: #D1D5DB;
         --text-brand: #C084FC;
         --text-brand-subtle: #DDD6FE;
         
-        --input-bg: rgba(24, 24, 27, 0.85);
-        --input-text: #FFFFFF;
+        --input-bg: #18181B;
+        --input-text: #FAFAFA;
         --input-border: #6B7280;
         
-        --tab-bg: rgba(39, 39, 42, 0.8);
-        --tab-text: #9CA3AF;
+        --tab-bg: rgba(39, 39, 42, 0.85);
+        --tab-text: #D1D5DB;
         --tab-selected-bg: #8B5CF6;
         --tab-selected-text: #FFFFFF;
         
         --primary-btn-bg: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
         --primary-btn-text: #FFFFFF;
         
-        --logout-bg: rgba(69, 10, 10, 0.85);
+        --logout-bg: rgba(69, 10, 10, 0.9);
         --logout-text: #FCA5A5;
         --logout-border: #7F1D1D;
         
-        --success-bg: rgba(6, 78, 59, 0.85);
+        --success-bg: rgba(6, 78, 59, 0.9);
         --success-border: #059669;
         --success-header: #A7F3D0;
         --success-text: #6EE7B7;
         
-        --notice-bg: rgba(69, 26, 3, 0.85);
+        --notice-bg: rgba(69, 26, 3, 0.9);
         --notice-border: #78350F;
         --notice-text: #FDE68A;
     }
@@ -223,17 +223,19 @@ css = """
 .gradio-container .prose,
 .gradio-container h1, 
 .gradio-container h2, 
-.gradio-container h3 {
+.gradio-container h3,
+.gradio-container h4 {
     color: var(--text-main) !important;
 }
 
-input, textarea, select, .gr-input, .gr-select {
+/* Fix input, dropdown, and textarea visibility across themes */
+input, textarea, select, .gr-input, .gr-select, 
+.gradio-container input, .gradio-container select, .gradio-container textarea {
     color: var(--input-text) !important;
     background-color: var(--input-bg) !important;
     border: 1.5px solid var(--input-border) !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
-    backdrop-filter: blur(8px) !important;
 }
 
 /* 5. Tab Styling */
@@ -273,7 +275,7 @@ button[role="tab"][aria-selected="true"] {
 
 /* 7. Banner & Metrics */
 .welcome-banner {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.9) 0%, rgba(109, 40, 217, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(109, 40, 217, 0.95) 100%);
     backdrop-filter: blur(8px);
     border-radius: 18px;
     padding: 18px 22px;
@@ -379,12 +381,16 @@ button[role="tab"][aria-selected="true"] {
     border-radius: 12px;
     padding: 10px 14px;
     margin-top: 10px;
-    color: var(--notice-text);
+    color: var(--notice-text) !important;
     font-size: 0.83rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.notice-box span {
+    color: var(--notice-text) !important;
 }
 
 /* 8. Button Styling */
