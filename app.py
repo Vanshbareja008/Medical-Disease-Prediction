@@ -150,7 +150,6 @@ def delete_user_by_username(username):
 def execute_clinical_predict(username, module_name, img_url, summary_text, recommendations, outcome="Low Risk (11.4%)", confidence="96.8%"):
     updated_history_df = append_history_record(username, module_name, outcome, confidence)
     
-    # Result HTML card with AI Warning Disclaimer & XGBoost term removed
     result_html = f"""
     <div class='eval-badge-success'>
         <div style='display: flex; align-items: flex-start; gap: 16px;'>
@@ -163,7 +162,6 @@ def execute_clinical_predict(username, module_name, img_url, summary_text, recom
                     <span style='background: #059669; color: #FFFFFF !important; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;'>LOW RISK</span>
                 </div>
                 
-                <!-- MEDICAL WARNING DISCLAIMER -->
                 <div style='background: #FEF3C7; border: 1px solid #F59E0B; padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; color: #78350F !important;'>
                     ⚠️ Notice: This is an AI-generated report. Please consult a qualified doctor first before taking clinical action.
                 </div>
@@ -236,7 +234,6 @@ css = """
     --input-text-color: #FFFFFF;
 }
 
-/* Tab Header Text Size Reduction so Obesity fits on bar */
 button.tabnav-button {
     font-size: 0.82rem !important;
     padding: 6px 10px !important;
@@ -415,7 +412,10 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
                 <img src="https://img.icons8.com/color/96/shield.png" alt="Privacy Shield" class="icon-img" />
             </div>
             <div>
-                <strong>Secure Workstation Guidelines:</strong> This portal provides real-time diagnostic triage for authorized clinical personnel. All session records are logged to the patient history system.
+                <strong>Secure Workstation Guidelines:</strong> This portal provides real-time diagnostic triage for authorized clinical personnel. All session records are logged to the patient history system.<br/>
+                <span style="font-size: 0.85rem; font-weight: 600; margin-top: 4px; display: block;">
+                    💻 Use a laptop and dark mode for the best experience. ⚠️ This is an AI-generated report; please consult a doctor before taking action.
+                </span>
             </div>
         </div>
         """)
@@ -484,7 +484,6 @@ with gr.Blocks(theme=custom_theme, css=css, title="Sick Sense Clinical AI") as d
             
             gr.Markdown("---")
 
-            # Shorter tab titles ensure Obesity ("⚖️ Obesity") stays fully visible without triggering overflow 3 dots
             with gr.Tabs():
                 with gr.Tab("❤️ Heart"):
                     gr.HTML("""
