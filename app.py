@@ -179,37 +179,32 @@ def predict_obesity(*args):
     return mock_predict("Mass & Lifestyle Analysis", "https://img.icons8.com/color/96/scale.png", "Body Mass Index (BMI 22.8) aligns with standard physiological targets.", "Sustain current weekly physical exercise routine.")
 
 
-# --- NATIVE THEME ENGINE DEFINITION (MODE-IMMUNE) ---
+# --- NATIVE GRADIO THEME ENGINE ---
 
 custom_theme = gr.themes.Soft(
     primary_hue="purple",
     secondary_hue="slate",
     neutral_hue="slate"
-).set(
-    # Explicit Dark Mode Color Overrides directly in Gradio Theme Engine
-    body_bg_color="#0F172A",
-    body_text_color="#F8FAFC",
-    block_bg_color="#1E293B",
-    block_border_color="#334155",
-    block_title_text_color="#F8FAFC",
-    block_label_text_color="#CBD5E1",
-    input_bg_color="#0F172A",
-    input_border_color="#475569",
-    input_text_color="#FFFFFF",
-    button_primary_bg_color="#7C3AED",
-    button_primary_bg_color_hover="#6D28D9",
-    button_primary_text_color="#FFFFFF",
-    table_border_color="#334155",
-    table_even_background_fill="#1E293B",
-    table_odd_background_fill="#0F172A"
 )
 
-# --- CLEAN SCOPED CSS (Only Custom Layout Elements) ---
+# --- CLEAN & SCOPED CSS OVERRIDES ---
 
 css = """
+:root {
+    --body-bg-fill: #0F172A;
+    --body-text-color: #F8FAFC;
+    --block-bg-fill: #1E293B;
+    --block-border-color: #334155;
+    --block-title-text-color: #F8FAFC;
+    --block-label-text-color: #CBD5E1;
+    --input-background-fill: #0F172A;
+    --input-border-color: #475569;
+    --input-text-color: #FFFFFF;
+}
+
 /* App Container Background Overlay */
 .gradio-container {
-    background-image: linear-gradient(rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.88)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
+    background-image: linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92)), url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80') !important;
     background-size: cover !important;
     background-position: center !important;
     background-attachment: fixed !important;
